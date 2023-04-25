@@ -29,7 +29,6 @@
 #include "bthread/unstable.h"
 #include "bvar/bvar.h"
 #include "brpc/socket.h"
-#include "brpc/socket_map.h"
 #include "brpc/channel.h"
 #include "brpc/load_balancer.h"
 #include "brpc/closure_guard.h"
@@ -598,6 +597,12 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
         response_attachment().clear();
         CHECK_EQ(0, bthread_id_unlock(info.id));
         return;
+    }
+
+    if (saved_error == EMOVED) {
+        //todo set real serverid....
+        _current_call.OnComplete(this, _error_code, info.responded, false);
+        return IssueRPC(butil::gettimeofday_us());
     }
 
     if ((!_error_code && _retry_policy == NULL) ||
