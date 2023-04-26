@@ -96,6 +96,7 @@ inline int SocketMapInsert(const SocketMapKey& key, SocketId* id) {
 // Find the SocketId associated with `key'.
 // Return 0 on found, -1 otherwise.
 int SocketMapFind(const SocketMapKey& key, SocketId* id);
+int SocketMapFind(const butil::EndPoint& key, SocketId* id);
 
 // Called once when the Socket returned by SocketMapInsert() is not needed.
 void SocketMapRemove(const SocketMapKey& key);
@@ -163,6 +164,7 @@ public:
 
     void Remove(const SocketMapKey& key, SocketId expected_id);
     int Find(const SocketMapKey& key, SocketId* id);
+    int Find(const butil::EndPoint& key, SocketId* id);
     void List(std::vector<SocketId>* ids);
     void List(std::vector<butil::EndPoint>* pts);
     const SocketMapOptions& options() const { return _options; }
@@ -192,6 +194,7 @@ private:
     butil::Mutex _mutex;
     Map _map;
     butil::atomic<bool> _exposed_in_bvar;
+    butil::FlatMap<butil::EndPoint, SocketId> _point_sock_map;
     bvar::PassiveStatus<std::string>* _this_map_bvar;
     bool _has_close_idle_thread;
     bthread_t _close_idle_thread;
