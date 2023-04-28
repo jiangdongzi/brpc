@@ -238,7 +238,6 @@ protected:
     // the RPC above has finished
     butil::intrusive_ptr<SharedLoadBalancer> _lb;
     ChannelOptions _options;
-    ChannelSignature _sig;
     int _preferred_index;
 };
 
