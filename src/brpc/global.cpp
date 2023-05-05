@@ -40,6 +40,7 @@
 #include "brpc/policy/discovery_naming_service.h"
 #include "brpc/policy/nacos_naming_service.h"
 #include "brpc/policy/redis_cluster_naming_service.h"
+#include "brpc/policy/redis_sentinel_slave_naming_service.h"
 
 // Load Balancers
 #include "brpc/policy/round_robin_load_balancer.h"
@@ -146,6 +147,7 @@ struct GlobalExtensions {
     DiscoveryNamingService dcns;
     NacosNamingService nns;
     RedisClusterNamingService rcns;
+    RedisSentinelSlaveNamingService rssns;
 
     RoundRobinLoadBalancer rr_lb;
     WeightedRoundRobinLoadBalancer wrr_lb;
@@ -380,6 +382,7 @@ static void GlobalInitializeOrDieImpl() {
     NamingServiceExtension()->RegisterOrDie("discovery", &g_ext->dcns);
     NamingServiceExtension()->RegisterOrDie("nacos", &g_ext->nns);
     NamingServiceExtension()->RegisterOrDie("redis_cluster", &g_ext->rcns);
+    NamingServiceExtension()->RegisterOrDie("redis_sentinel_slave", &g_ext->rssns);
 
     // Load Balancers
     LoadBalancerExtension()->RegisterOrDie("rr", &g_ext->rr_lb);
