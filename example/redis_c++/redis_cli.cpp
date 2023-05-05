@@ -30,6 +30,7 @@
 
 DEFINE_string(connection_type, "", "Connection type. Available values: single, pooled, short");
 DEFINE_string(server, "127.0.0.1:6379", "IP Address of server");
+DEFINE_string(lb, "rr", "load balancer");
 DEFINE_int32(timeout_ms, 1000, "RPC timeout in milliseconds");
 DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)"); 
 DEFINE_string(auth, "", "auth...");
@@ -114,7 +115,7 @@ int main(int argc, char* argv[]) {
         brpc::policy::RedisAuthenticator* auth = new brpc::policy::RedisAuthenticator(FLAGS_auth);
         options.auth = auth;
     }
-    if (channel.Init(FLAGS_server.c_str(), "c_redis_cluster", &options) != 0) {
+    if (channel.Init(FLAGS_server.c_str(), FLAGS_lb.c_str(), &options) != 0) {
         LOG(ERROR) << "Fail to initialize channel";
         return -1;
     }
