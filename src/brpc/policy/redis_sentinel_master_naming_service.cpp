@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "brpc/policy/redis_sentinel_slave_naming_service.h"
+#include "brpc/policy/redis_sentinel_master_naming_service.h"
 #include <brpc/policy/redis_authenticator.h>
 #include "brpc/log.h"
 #include "bthread/bthread.h"
@@ -30,7 +30,7 @@
 namespace brpc {
 namespace policy {
 
-int RedisSentinelSlaveNamingService::GetServers(const char *service_and_token, std::vector<ServerNode> *servers) {
+int RedisSentinelMasterNamingService::GetServers(const char *service_and_token, std::vector<ServerNode> *servers) {
     servers->clear();
 
     std::vector<std::string> out;
@@ -62,7 +62,7 @@ int RedisSentinelSlaveNamingService::GetServers(const char *service_and_token, s
     }
 
     brpc::RedisRequest request;
-    if (!request.AddCommand("SENTINEL SLAVES %s", master_name.c_str())) {
+    if (!request.AddCommand("SENTINEL get-master-addr-by-name %s", master_name.c_str())) {
         LOG(ERROR) << "Fail to add command";
         return -1;
     }
@@ -76,21 +76,8 @@ int RedisSentinelSlaveNamingService::GetServers(const char *service_and_token, s
     }
     const auto& reply = response.reply(0);
     for (int i = 0; i < reply.size(); i++) {
-        const auto& local_reply = reply[i];
-        std::string ip, port, flags;
-        for (int j = 0; j < local_reply.size(); j += 2) {
-            if (local_reply[j].data() == "ip") {
-                ip = local_reply[j + 1].c_str();
-            } else if (local_reply[j].data() == "port") {
-                port = local_reply[j + 1].c_str();
-            } else if (local_reply[j].data() == "flags") {
-                flags = local_reply[j + 1].c_str();
-            }
-        }
-
-        if (flags != "slave") {
-            continue;
-        }
+        std::string ip = reply[0].c_str();
+        std::string port = reply[1].c_str();
 
         const char* str = (ip + ":" + port).c_str();
 
@@ -105,14 +92,14 @@ int RedisSentinelSlaveNamingService::GetServers(const char *service_and_token, s
     return 0;
 }
 
-void RedisSentinelSlaveNamingService::Describe(std::ostream &os, const DescribeOptions &) const {
+void RedisSentinelMasterNamingService::Describe(std::ostream &os, const DescribeOptions &) const {
     os << "redis_sentinel_slave";
     return;
 }
 
-NamingService *RedisSentinelSlaveNamingService::New() const { return new RedisSentinelSlaveNamingService; }
+NamingService *RedisSentinelMasterNamingService::New() const { return new RedisSentinelMasterNamingService; }
 
-void RedisSentinelSlaveNamingService::Destroy() { delete this; }
+void RedisSentinelMasterNamingService::Destroy() { delete this; }
 
 } // namespace policy
 } // namespace brpc
