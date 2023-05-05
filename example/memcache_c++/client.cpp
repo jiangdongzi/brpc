@@ -28,9 +28,9 @@
 
 
 int main(int argc, char* argv[]) {
-    std::string input = "hello|123|456||789|";
+    std::string input = "hello\r\n1\n23|456\r\n789|";
     std::vector<std::string> out;
-    butil::SplitStringUsingSubstr(input, "|", &out);
+    butil::SplitStringUsingSubstr(input, "\r\n", &out);
     LOG(INFO) << "sz: " << out.size();
     for (const auto& ele : out) {
         LOG(INFO) << "aaa " << ele << " bbb";
