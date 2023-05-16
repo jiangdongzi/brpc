@@ -34,9 +34,9 @@ int RedisSentinelSlaveNamingService::GetServers(const char *service_and_token, s
     servers->clear();
 
     std::vector<std::string> out;
-    butil::SplitStringUsingSubstr(service_and_token, "this_is_spliter", &out);
+    butil::SplitStringUsingSubstr(service_and_token, "\r\n", &out);
 
-    if (out.size() != 3 || out[0].empty() || out[1].empty()) {
+    if (out.size() != 3 || out[0].empty() || out[1].empty()) { //out[0] : url,  out[1] : master_name, out[2] : token
         LOG(ERROR) << "please check service_and_token";
         return -1;
     }
