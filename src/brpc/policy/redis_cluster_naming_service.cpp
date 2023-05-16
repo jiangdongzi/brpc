@@ -22,6 +22,7 @@
 #include <gflags/gflags.h>
 #include <brpc/channel.h>
 #include <brpc/redis.h>
+#include "butil/strings/string_split.h"
 #include <netdb.h>  // gethostbyname_r
 #include <stdlib.h> // strtol
 #include <string>   // std::string
@@ -31,20 +32,18 @@ namespace policy {
 
 RedisClusterNamingService::RedisClusterNamingService() = default;
 
-std::pair<std::string, std::string> GetServiceNameAndToken (const std::string& input) {
-    std::stringstream ss(input);
-    std::string service_name, token;
-    std::getline(ss, service_name, '|');
-    std::getline(ss, token);
-    return {service_name, token};
-}
-
-
 int RedisClusterNamingService::GetServers(const char *service_name_and_token, std::vector<ServerNode> *servers) {
     servers->clear();
-    const auto service_name_token_pair = GetServiceNameAndToken (service_name_and_token);
-    const auto& service_name = service_name_token_pair.first;
-    const auto& token = service_name_token_pair.second;
+
+    std::vector<std::string> out;
+    butil::SplitStringUsingSubstr(service_name_and_token, "\r\n", &out);
+
+    if (out.size() != 2 || out[0].empty()) {  //out[0] : url, out[1] : token
+        return -1;
+    }
+
+    const auto& service_name = out[0];
+    const auto& token = out[1];
 
     brpc::Channel channel;
     
