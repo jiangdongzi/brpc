@@ -210,6 +210,18 @@ endif()
 
 find_package(OpenSSL)
 
+set(LEVELDB_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
+set(LEVELDB_LIB "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libleveldb.a")
+
+set(GFLAGS_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/buildtrees/gflags/x64-linux-rel/include")
+set(GFLAGS_LIBRARY "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libgflags.a")
+
+
+set(PROTOBUF_INCLUDE_DIRS "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
+set(PROTOBUF_LIBRARIES "/data/zhiyuan/mico_codes/miuscxx/thirdparty/lib/libprotobuf.a")
+set(OPENSSL_CRYPTO_LIBRARY "/data/zhiyuan/github/vcpkg/packages/openssl-unix_x64-linux/lib/libcrypto.a")
+
+
 include_directories(
         ${GFLAGS_INCLUDE_PATH}
         ${PROTOBUF_INCLUDE_DIRS}
@@ -228,6 +240,8 @@ set(DYNAMIC_LIB
     ${OPENSSL_CRYPTO_LIBRARY}
     dl
     z)
+
+message("ivyjxj.. " ${OPENSSL_CRYPTO_LIBRARY})
 
 if(WITH_MESALINK)
     list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
