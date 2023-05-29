@@ -92,11 +92,11 @@ int RedisSentinelSlaveNamingService::GetServers(const char *service_and_token, s
             continue;
         }
 
-        const char* str = (ip + ":" + port).c_str();
+        const std::string str = ip + ":" + port;
 
         butil::EndPoint point;
-        if (butil::str2endpoint(str, &point) != 0 &&
-            butil::hostname2endpoint(str, &point) != 0) {
+        if (butil::str2endpoint(str.data(), &point) != 0 &&
+            butil::hostname2endpoint(str.data(), &point) != 0) {
             LOG(ERROR) << "Invalid address=`" << ip.c_str() << ":" << port << '\'';
             continue;
         }
