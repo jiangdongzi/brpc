@@ -314,7 +314,7 @@ void ProcessRedisResponse(InputMessageBase* msg_base) {
             break;
         }
         saved_error = EMOVED;
-        std::err << "moved...." << msg->response;
+        std::cerr << "moved...." << msg->response;
         LOG(ERROR) << "moved..: " << msg->response;
         SocketId id;
         SocketMapFind(end_point, &id);
