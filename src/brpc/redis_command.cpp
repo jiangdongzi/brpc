@@ -138,6 +138,8 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 size = va_arg(ap, size_t);
                 if (size > 0) {
                     compbuf.append(arg, size);
+                } else {
+                    FlushComponent(&nocount_buf, &compbuf, &ncomponent);
                 }
                 ++nargs;
                 break;
