@@ -17,6 +17,8 @@
 
 #include "info_thread.h"
 
+DECLARE_bool(req_once);
+
 namespace brpc {
 
 InfoThread::InfoThread()
@@ -67,6 +69,10 @@ void InfoThread::run() {
         last_sent_count = cur_sent_count;
         last_succ_count = cur_succ_count;
         last_error_count = cur_error_count;
+
+        if (FLAGS_req_once) {
+            break;
+        }
 
         if (_stop || ++i % 10 == 0) {
             printf("[Latency]\n"
