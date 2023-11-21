@@ -31,9 +31,13 @@
 #include <json2pb/pb_to_json.h>
 #include "json_loader.h"
 #include "rpc_press_impl.h"
+#include "bthread/sys_futex.h"
 
 using google::protobuf::Message;
 using google::protobuf::Closure;
+
+extern int wake_val;
+DECLARE_bool(req_once);
 
 namespace pbrpcframework {
 
@@ -183,6 +187,7 @@ void* RpcPress::sync_call_thread(void* arg) {
     return NULL;
 }
 
+
 void RpcPress::handle_response(brpc::Controller* cntl, 
                                Message* request,
                                Message* response, 
@@ -206,6 +211,9 @@ void RpcPress::handle_response(brpc::Controller* cntl,
     }
     delete response;
     delete cntl;
+    if (FLAGS_req_once) {
+        bthread::futex_wake_private(&wake_val, 1);
+    }
 }
 
 static butil::atomic<int> g_thread_count(0);
@@ -245,13 +253,18 @@ void RpcPress::sync_client() {
         } else {
             int64_t end_time = butil::monotonic_time_ns();
             int64_t expected_time = last_expected_time + interval;
-            if (end_time < expected_time) {
+            if (end_time < expected_time && !_options.only_send_once) {
                 usleep((expected_time - end_time)/1000);
             }
             if (end_time - expected_time > max_tolerant_delay) {
                 expected_time = end_time;
             }            
             last_expected_time = expected_time;
+        }
+        if (_options.only_send_once) {
+            break;
+            // stop();
+            // exit(0);
         }
     }
 }

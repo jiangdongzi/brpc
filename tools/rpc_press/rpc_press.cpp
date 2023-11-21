@@ -23,6 +23,7 @@
 #include <butil/string_splitter.h>
 #include <string.h>
 #include "rpc_press_impl.h"
+#include "bthread/sys_futex.h"
 
 DEFINE_int32(dummy_port, 8888, "Port of dummy server"); 
 DEFINE_string(proto, "", " user's proto files with path");
@@ -43,6 +44,7 @@ DEFINE_int32(response_compress_type, 0, "Snappy:1 Gzip:2 Zlib:3 LZ4:4 None:0");
 DEFINE_int32(attachment_size, 0, "Carry so many byte attachment along with requests"); 
 DEFINE_int32(duration, 0, "how many seconds the press keep");
 DEFINE_int32(qps, 100 , "how many calls  per seconds");
+DEFINE_bool(req_once, false , "only call once");
 DEFINE_bool(pretty, true, "output pretty jsons");
 
 bool set_press_options(pbrpcframework::PressOptions* options){
@@ -92,15 +94,19 @@ bool set_press_options(pbrpcframework::PressOptions* options){
     options->host = FLAGS_server;
     options->proto_file = FLAGS_proto;
     options->proto_includes = FLAGS_inc;
+    options->only_send_once = FLAGS_req_once;
+
     return true;
 }
+
+int wake_val = 0;
 
 int main(int argc, char* argv[]) {
     // Parse gflags. We recommend you to use gflags as well
     GFLAGS_NS::ParseCommandLineFlags(&argc, &argv, true);
     // set global log option
 
-    if (FLAGS_dummy_port >= 0) {
+    if (FLAGS_dummy_port >= 0 && !FLAGS_req_once) {
         brpc::StartDummyServerAt(FLAGS_dummy_port);
     }
 
@@ -115,12 +121,16 @@ int main(int argc, char* argv[]) {
     }
 
     rpc_press->start();
-    if (FLAGS_duration <= 0) {
-        while (!brpc::IsAskedToQuit()) {
-            sleep(1);
+    if (!FLAGS_req_once) {
+        if (FLAGS_duration <= 0) {
+            while (!brpc::IsAskedToQuit()) {
+                sleep(1);
+            }
+        } else {
+            sleep(FLAGS_duration);
         }
     } else {
-        sleep(FLAGS_duration);
+        bthread::futex_wait_private(&wake_val, 0, nullptr);
     }
     rpc_press->stop();
     // NOTE(gejun): Can't delete rpc_press on exit. It's probably
