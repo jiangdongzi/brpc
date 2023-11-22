@@ -176,7 +176,9 @@ int RpcPress::init(const PressOptions* options) {
         LOG(ERROR) << "Fail to load requests";
         return -1;
     }
-    LOG(INFO) << "Loaded " << _msgs.size() << " requests";
+    if(!options->only_send_once) {
+        LOG(INFO) << "Loaded " << _msgs.size() << " requests";
+    }
     _latency_recorder.expose("rpc_press");
     _error_count.expose("rpc_press_error_count");
     return 0;
@@ -196,13 +198,18 @@ void RpcPress::handle_response(brpc::Controller* cntl,
         int64_t rpc_call_time_us = butil::gettimeofday_us() - start_time;
         _latency_recorder << rpc_call_time_us;
 
-        if (_output_json) {
+        if (_output_json || FLAGS_req_once) {
             std::string response_json;
             std::string error;
             if (!json2pb::ProtoMessageToJson(*response, &response_json, &error)) {
                 LOG(WARNING) << "Fail to convert to json: " << error;
             }
-            fprintf(_output_json, "%s\n", response_json.c_str());
+            if (_output_json) {
+                fprintf(_output_json, "%s\n", response_json.c_str());
+            }
+            if (FLAGS_req_once) {
+                printf("%s\n", response_json.c_str());
+            }
         }
     } else {
         LOG(WARNING) << "error_code=" <<  cntl->ErrorCode() << ", "
