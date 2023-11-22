@@ -240,6 +240,7 @@ void RpcPress::sync_client() {
     int64_t max_tolerant_delay = std::max((int64_t) 10000000L, 10 * interval);    
     while (!_stop) {
         brpc::Controller* cntl = new brpc::Controller;
+        cntl->http_request().uri().set_host(_options.host);
         msg_index = (msg_index + _options.test_thread_num) % _msgs.size();
         Message* request = _msgs[msg_index];
         Message* response = _pbrpc_client->get_output_message();
