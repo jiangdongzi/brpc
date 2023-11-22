@@ -39,7 +39,7 @@ void InfoThread::run() {
     int64_t last_succ_count = 0;
     int64_t last_error_count = 0;
     int64_t start_time = butil::gettimeofday_us();
-    while (!_stop) {
+    while (!_stop && !FLAGS_req_once) {
         int64_t end_time = 0;
         while (!_stop &&
                (end_time = butil::gettimeofday_us()) < start_time + 1000000L) {
@@ -69,10 +69,6 @@ void InfoThread::run() {
         last_sent_count = cur_sent_count;
         last_succ_count = cur_succ_count;
         last_error_count = cur_error_count;
-
-        if (FLAGS_req_once) {
-            break;
-        }
 
         if (_stop || ++i % 10 == 0) {
             printf("[Latency]\n"
