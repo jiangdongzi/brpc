@@ -253,6 +253,7 @@ void RpcPress::sync_client() {
             Message*, int64_t>
             (this, &RpcPress::handle_response, cntl, request, response, start_time);
         const brpc::CallId cid1 = cntl->call_id();
+        cntl->http_request().uri().set_host(_options.host);
         _pbrpc_client->call_method(cntl, request, response, done);
         _sent_count << 1;
 
