@@ -603,7 +603,6 @@ public:
     // -1 means no deadline.
     int64_t deadline_us() const { return _deadline_us; }
 
-<<<<<<< HEAD
     using AfterRpcRespFnType = std::function<void(Controller* cntl,
                                                const google::protobuf::Message* req,
                                                const google::protobuf::Message* res)>;
@@ -611,11 +610,9 @@ public:
     void set_after_rpc_resp_fn(AfterRpcRespFnType&& fn) { _after_rpc_resp_fn = fn; }
 
     void CallAfterRpcResp(const google::protobuf::Message* req, const google::protobuf::Message* res);
-=======
     void set_tmp_single_socket_id (const SocketId& id) {
         _tmp_single_server_id = id;
     }
->>>>>>> 9185d1e1 (checkpoint)
 
 private:
     struct CompletionInfo {
