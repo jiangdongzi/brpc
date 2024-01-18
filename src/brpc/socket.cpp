@@ -695,6 +695,7 @@ int Socket::Create(const SocketOptions& options, SocketId* id) {
     m->_hc_started.store(false, butil::memory_order_relaxed);
     m->_ninprocess.store(1, butil::memory_order_relaxed);
     m->_auth_flag_error.store(0, butil::memory_order_relaxed);
+    m->_goaway_flag = false;
     const int rc2 = bthread_id_create(&m->_auth_id, NULL, NULL);
     if (rc2) {
         LOG(ERROR) << "Fail to create auth_id: " << berror(rc2);
