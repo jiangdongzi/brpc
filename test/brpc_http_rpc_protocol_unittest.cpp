@@ -19,15 +19,25 @@
 
 // Date: Sun Jul 13 15:04:18 CST 2014
 
+#include <cstddef>
+#include <google/protobuf/stubs/logging.h>
+#include <string>
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <butil/build_config.h> // OS_MACOSX
+#if defined(OS_MACOSX)
+#include <sys/event.h>
+#endif
 #include <gtest/gtest.h>
 #include <gflags/gflags.h>
-#include <google/protobuf/descriptor.h>
 #include <google/protobuf/text_format.h>
-#include "butil/time.h"
-#include "butil/macros.h"
+#include <unistd.h>
+#include <butil/strings/string_number_conversions.h>
+#include <brpc/policy/http_rpc_protocol.h>
+#include <butil/base64.h>
+#include "brpc/http_method.h"
+#include "butil/iobuf.h"
+#include "butil/logging.h"
 #include "butil/files/scoped_file.h"
 #include "butil/fd_guard.h"
 #include "butil/file_util.h"
@@ -36,7 +46,6 @@
 #include "brpc/server.h"
 #include "brpc/channel.h"
 #include "brpc/policy/most_common_message.h"
-#include "brpc/controller.h"
 #include "echo.pb.h"
 #include "brpc/policy/http_rpc_protocol.h"
 #include "brpc/policy/http2_rpc_protocol.h"
@@ -44,7 +53,7 @@
 #include "json2pb/json_to_pb.h"
 #include "brpc/details/method_status.h"
 #include "brpc/rpc_dump.h"
-#include "bvar/collector.h"
+#include "bthread/unstable.h"
 
 namespace brpc {
 DECLARE_bool(rpc_dump);
@@ -71,6 +80,8 @@ namespace {
 
 static const std::string EXP_REQUEST = "hello";
 static const std::string EXP_RESPONSE = "world";
+static const std::string EXP_RESPONSE_CONTENT_LENGTH = "1024";
+static const std::string EXP_RESPONSE_TRANSFER_ENCODING = "chunked";
 
 static const std::string MOCK_CREDENTIAL = "mock credential";
 static const std::string MOCK_USER = "mock user";
@@ -1014,6 +1025,158 @@ TEST_F(HttpTest, broken_socket_stops_progressive_reading) {
     ASSERT_EQ(ECONNRESET, reader->destroying_status().error_code());
 }
 
+static const std::string TEST_PROGRESSIVE_HEADER = "Progressive";
+static const std::string TEST_PROGRESSIVE_HEADER_VAL = "Progressive-val";
+
+class ServerProgressiveReader : public ReadBody {
+public:
+    ServerProgressiveReader(brpc::Controller* cntl, google::protobuf::Closure* done) 
+        : _cntl(cntl)
+        , _done(done) {}
+
+    // @ProgressiveReader
+    void OnEndOfMessage(const butil::Status& st) {
+        butil::intrusive_ptr<ReadBody>(this);
+        brpc::ClosureGuard done_guard(_done);
+        ASSERT_LT(_buf.size(), PA_DATA_LEN);
+        ASSERT_EQ(0, memcmp(_buf.data(), PA_DATA, _buf.size()));
+        _destroyed = true;
+        _destroying_st = st;
+        LOG(INFO) << "Destroy ReadBody=" << this << ", " << st;
+        _cntl->response_attachment().append("Sucess");
+    }
+private:
+    brpc::Controller* _cntl;
+    google::protobuf::Closure* _done;
+};
+
+class ServerAlwaysFailReader : public brpc::ProgressiveReader {
+public:
+    ServerAlwaysFailReader(brpc::Controller* cntl, google::protobuf::Closure* done) 
+        : _cntl(cntl)
+        , _done(done) {}
+
+    // @ProgressiveReader
+    butil::Status OnReadOnePart(const void* /*data*/, size_t /*length*/) {
+        return butil::Status(-1, "intended fail at %s:%d", __FILE__, __LINE__);
+    }    
+
+    void OnEndOfMessage(const butil::Status& st) {
+        brpc::ClosureGuard done_guard(_done);
+        CHECK_EQ(-1, st.error_code());
+        _cntl->SetFailed("Must Failed");
+        LOG(INFO) << "Destroy " << this << ": " << st;
+        delete this;
+    }
+private:
+    brpc::Controller* _cntl;
+    google::protobuf::Closure* _done;
+};
+
+class UploadServiceImpl : public ::test::UploadService {
+public:
+    void Upload(::google::protobuf::RpcController* controller,
+                        const ::test::HttpRequest* request,
+                        ::test::HttpResponse* response,
+                        ::google::protobuf::Closure* done) {
+        brpc::Controller* cntl = static_cast<brpc::Controller*>(controller);
+        check_header(cntl);
+        cntl->request_will_be_read_progressively();
+        cntl->ReadProgressiveAttachmentBy(new ServerProgressiveReader(cntl, done));
+    }
+                        
+    void UploadFailed(::google::protobuf::RpcController* controller,
+                        const ::test::HttpRequest* request,
+                        ::test::HttpResponse* response,
+                        ::google::protobuf::Closure* done) {
+        brpc::Controller* cntl = static_cast<brpc::Controller*>(controller);
+        check_header(cntl);
+        cntl->request_will_be_read_progressively();
+        cntl->ReadProgressiveAttachmentBy(new ServerAlwaysFailReader(cntl, done));
+    }
+
+private:
+    void check_header(brpc::Controller* cntl) {
+        const std::string* test_header = cntl->http_request().GetHeader(TEST_PROGRESSIVE_HEADER);
+        GOOGLE_CHECK_NOTNULL(test_header);
+        CHECK_EQ(*test_header, TEST_PROGRESSIVE_HEADER_VAL);
+    }
+};
+
+TEST_F(HttpTest, server_end_read_short_body_progressively) {
+    const int port = 8923;
+    brpc::ServiceOptions opt;
+    opt.enable_progressive_read = true;
+    opt.ownership = brpc::SERVER_DOESNT_OWN_SERVICE;
+    UploadServiceImpl upsvc;
+    brpc::Server server;
+    EXPECT_EQ(0, server.AddService(&upsvc, opt));
+    EXPECT_EQ(0, server.Start(port, NULL));
+
+    brpc::Channel channel;
+    brpc::ChannelOptions options;
+    options.protocol = brpc::PROTOCOL_HTTP;
+    ASSERT_EQ(0, channel.Init(butil::EndPoint(butil::my_ip(), port), &options));
+    brpc::Controller cntl;
+    cntl.http_request().uri() = "/UploadService/Upload";
+    cntl.http_request().SetHeader(TEST_PROGRESSIVE_HEADER, TEST_PROGRESSIVE_HEADER_VAL);
+    cntl.http_request().set_method(brpc::HTTP_METHOD_POST);
+    
+    ASSERT_GT(PA_DATA_LEN, 8u);  // long enough to hold a 64-bit decimal.
+    char buf[PA_DATA_LEN];
+    for (size_t c = 0; c < 10000;) {
+        CopyPAPrefixedWithSeqNo(buf, c);
+        if (cntl.request_attachment().append(buf, sizeof(buf)) != 0) {
+            if (errno == brpc::EOVERCROWDED) {
+                LOG(INFO) << "full msg=" << cntl.request_attachment().to_string();
+            } else {
+                LOG(INFO) << "Error:" << errno;
+            }
+            break;
+        }
+        ++c;
+    }
+    channel.CallMethod(NULL, &cntl, NULL, NULL, NULL);
+    ASSERT_FALSE(cntl.Failed());
+}
+
+TEST_F(HttpTest, server_end_read_failed) {
+    const int port = 8923;
+    brpc::ServiceOptions opt;
+    opt.enable_progressive_read = true;
+    opt.ownership = brpc::SERVER_DOESNT_OWN_SERVICE;
+    UploadServiceImpl upsvc;
+    brpc::Server server;
+    EXPECT_EQ(0, server.AddService(&upsvc, opt));
+    EXPECT_EQ(0, server.Start(port, NULL));
+
+    brpc::Channel channel;
+    brpc::ChannelOptions options;
+    options.protocol = brpc::PROTOCOL_HTTP;
+    ASSERT_EQ(0, channel.Init(butil::EndPoint(butil::my_ip(), port), &options));
+    brpc::Controller cntl;
+    cntl.http_request().uri() = "/UploadService/UploadFailed";
+    cntl.http_request().SetHeader(TEST_PROGRESSIVE_HEADER, TEST_PROGRESSIVE_HEADER_VAL);
+    cntl.http_request().set_method(brpc::HTTP_METHOD_POST);
+
+    ASSERT_GT(PA_DATA_LEN, 8u);  // long enough to hold a 64-bit decimal.
+    char buf[PA_DATA_LEN];
+    for (size_t c = 0; c < 10;) {
+        CopyPAPrefixedWithSeqNo(buf, c);
+        if (cntl.request_attachment().append(buf, sizeof(buf)) != 0) {
+            if (errno == brpc::EOVERCROWDED) {
+                LOG(INFO) << "full msg=" << cntl.request_attachment().to_string();
+            } else {
+                LOG(INFO) << "Error:" << errno;
+            }
+            break;
+        }
+        ++c;
+    }
+    channel.CallMethod(NULL, &cntl, NULL, NULL, NULL);
+    ASSERT_TRUE(cntl.Failed());
+}
+
 TEST_F(HttpTest, http2_sanity) {
     const int port = 8923;
     brpc::Server server;
@@ -1385,7 +1548,7 @@ TEST_F(HttpTest, http2_header_after_data) {
     ASSERT_EQ(res_header.content_type(), "application/proto");
     // Check overlapped header is overwritten by the latter.
     const std::string* user_defined1 = res_header.GetHeader("user-defined1");
-    ASSERT_EQ(*user_defined1, "overwrite-a");
+    ASSERT_EQ(*user_defined1, "a,overwrite-a");
     const std::string* user_defined2 = res_header.GetHeader("user-defined2");
     ASSERT_EQ(*user_defined2, "b");
 }
@@ -1620,6 +1783,220 @@ TEST_F(HttpTest, spring_protobuf_text_content_type) {
     ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(
             cntl.response_attachment().to_string(), &res));
     ASSERT_EQ(EXP_RESPONSE, res.message());
+}
+
+class HttpServiceImpl : public ::test::HttpService {
+    public:
+    void Head(::google::protobuf::RpcController* cntl_base,
+        const ::test::HttpRequest*,
+        ::test::HttpResponse*,
+        ::google::protobuf::Closure* done) override {
+        brpc::ClosureGuard done_guard(done);
+        brpc::Controller* cntl = static_cast<brpc::Controller*>(cntl_base);
+        ASSERT_EQ(cntl->http_request().method(), brpc::HTTP_METHOD_HEAD);
+        const std::string* index = cntl->http_request().GetHeader("x-db-index");
+        ASSERT_NE(nullptr, index);
+        int i;
+        ASSERT_TRUE(butil::StringToInt(*index, &i));
+        cntl->http_response().set_content_type("text/plain");
+        if (i % 2 == 0) {
+            cntl->http_response().SetHeader("Content-Length",
+                EXP_RESPONSE_CONTENT_LENGTH);
+        } else {
+            cntl->http_response().SetHeader("Transfer-Encoding",
+                EXP_RESPONSE_TRANSFER_ENCODING);
+        }
+    }
+
+    void Expect(::google::protobuf::RpcController* cntl_base,
+        const ::test::HttpRequest*,
+        ::test::HttpResponse*,
+        ::google::protobuf::Closure* done) override {
+        brpc::ClosureGuard done_guard(done);
+        brpc::Controller* cntl = static_cast<brpc::Controller*>(cntl_base);
+        const std::string* expect = cntl->http_request().GetHeader("Expect");
+        ASSERT_TRUE(expect != NULL);
+        ASSERT_EQ("100-continue", *expect);
+        ASSERT_EQ(cntl->http_request().method(), brpc::HTTP_METHOD_POST);
+        cntl->response_attachment().append("world");
+    }
+};
+
+TEST_F(HttpTest, http_head) {
+    const int port = 8923;
+    brpc::Server server;
+    HttpServiceImpl svc;
+    EXPECT_EQ(0, server.AddService(&svc, brpc::SERVER_DOESNT_OWN_SERVICE));
+    EXPECT_EQ(0, server.Start(port, NULL));
+
+    brpc::Channel channel;
+    brpc::ChannelOptions options;
+    options.protocol = brpc::PROTOCOL_HTTP;
+    ASSERT_EQ(0, channel.Init(butil::EndPoint(butil::my_ip(), port), &options));
+    for (int i = 0; i < 100; ++i) {
+        brpc::Controller cntl;
+        cntl.http_request().set_method(brpc::HTTP_METHOD_HEAD);
+        cntl.http_request().uri().set_path("/HttpService/Head");
+        cntl.http_request().SetHeader("x-db-index", butil::IntToString(i));
+        channel.CallMethod(NULL, &cntl, NULL, NULL, NULL);
+
+        ASSERT_FALSE(cntl.Failed()) << cntl.ErrorText();
+        if (i % 2 == 0) {
+            const std::string* content_length
+                = cntl.http_response().GetHeader("content-length");
+            ASSERT_NE(nullptr, content_length);
+            ASSERT_EQ(EXP_RESPONSE_CONTENT_LENGTH, *content_length);
+        } else {
+            const std::string* transfer_encoding
+                = cntl.http_response().GetHeader("Transfer-Encoding");
+            ASSERT_NE(nullptr, transfer_encoding);
+            ASSERT_EQ(EXP_RESPONSE_TRANSFER_ENCODING, *transfer_encoding);
+        }
+    }
+}
+
+#define BRPC_CRLF "\r\n"
+
+void MakeHttpRequestHeaders(butil::IOBuf* out,
+                            brpc::HttpHeader* h,
+                            const butil::EndPoint& remote_side) {
+    butil::IOBufBuilder os;
+    os << HttpMethod2Str(h->method()) << ' ';
+    const brpc::URI& uri = h->uri();
+    uri.PrintWithoutHost(os); // host is sent by "Host" header.
+    os << " HTTP/" << h->major_version() << '.'
+       << h->minor_version() << BRPC_CRLF;
+    //rfc 7230#section-5.4:
+    //A client MUST send a Host header field in all HTTP/1.1 request
+    //messages. If the authority component is missing or undefined for
+    //the target URI, then a client MUST send a Host header field with an
+    //empty field-value.
+    //rfc 7231#sec4.3:
+    //the request-target consists of only the host name and port number of
+    //the tunnel destination, seperated by a colon. For example,
+    //Host: server.example.com:80
+    if (h->GetHeader("host") == NULL) {
+        os << "Host: ";
+        if (!uri.host().empty()) {
+            os << uri.host();
+            if (uri.port() >= 0) {
+                os << ':' << uri.port();
+            }
+        } else if (remote_side.port != 0) {
+            os << remote_side;
+        }
+        os << BRPC_CRLF;
+    }
+    if (!h->content_type().empty()) {
+        os << "Content-Type: " << h->content_type()
+           << BRPC_CRLF;
+    }
+    for (brpc::HttpHeader::HeaderIterator it = h->HeaderBegin();
+         it != h->HeaderEnd(); ++it) {
+        os << it->first << ": " << it->second << BRPC_CRLF;
+    }
+    if (h->GetHeader("Accept") == NULL) {
+        os << "Accept: */*" BRPC_CRLF;
+    }
+    // The fake "curl" user-agent may let servers return plain-text results.
+    if (h->GetHeader("User-Agent") == NULL) {
+        os << "User-Agent: brpc/1.0 curl/7.0" BRPC_CRLF;
+    }
+    const std::string& user_info = h->uri().user_info();
+    if (!user_info.empty() && h->GetHeader("Authorization") == NULL) {
+        // NOTE: just assume user_info is well formatted, namely
+        // "<user_name>:<password>". Users are very unlikely to add extra
+        // characters in this part and even if users did, most of them are
+        // invalid and rejected by http_parser_parse_url().
+        std::string encoded_user_info;
+        butil::Base64Encode(user_info, &encoded_user_info);
+        os << "Authorization: Basic " << encoded_user_info << BRPC_CRLF;
+    }
+    os << BRPC_CRLF;  // CRLF before content
+    os.move_to(*out);
+}
+
+#undef BRPC_CRLF
+
+void ReadOneResponse(brpc::SocketUniquePtr& sock,
+    brpc::DestroyingPtr<brpc::policy::HttpContext>& imsg_guard) {
+#if defined(OS_LINUX)
+    ASSERT_EQ(0, bthread_fd_wait(sock->fd(), EPOLLIN));
+#elif defined(OS_MACOSX)
+    ASSERT_EQ(0, bthread_fd_wait(sock->fd(), EVFILT_READ));
+#endif
+
+    butil::IOPortal read_buf;
+    int64_t start_time = butil::gettimeofday_us();
+    while (true) {
+        const ssize_t nr = read_buf.append_from_file_descriptor(sock->fd(), 4096);
+        LOG(INFO) << "nr=" << nr;
+        LOG(INFO) << butil::ToPrintableString(read_buf);
+        ASSERT_TRUE(nr > 0 || (nr < 0 && errno == EAGAIN));
+        if (errno == EAGAIN) {
+            ASSERT_LT(butil::gettimeofday_us(), start_time + 1000000L) << "Too long!";
+            bthread_usleep(1000);
+            continue;
+        }
+        brpc::ParseResult pr = brpc::policy::ParseHttpMessage(&read_buf, sock.get(), false, NULL);
+        ASSERT_TRUE(pr.error() == brpc::PARSE_ERROR_NOT_ENOUGH_DATA || pr.is_ok());
+        if (pr.is_ok()) {
+            imsg_guard.reset(static_cast<brpc::policy::HttpContext*>(pr.message()));
+            break;
+        }
+    }
+    ASSERT_TRUE(read_buf.empty());
+}
+
+TEST_F(HttpTest, http_expect) {
+    const int port = 8923;
+    brpc::Server server;
+    HttpServiceImpl svc;
+    EXPECT_EQ(0, server.AddService(&svc, brpc::SERVER_DOESNT_OWN_SERVICE));
+    EXPECT_EQ(0, server.Start(port, NULL));
+
+    butil::EndPoint ep;
+    ASSERT_EQ(0, butil::str2endpoint("127.0.0.1:8923", &ep));
+    brpc::SocketOptions options;
+    options.remote_side = ep;
+    brpc::SocketId id;
+    ASSERT_EQ(0, brpc::Socket::Create(options, &id));
+    brpc::SocketUniquePtr sock;
+    ASSERT_EQ(0, brpc::Socket::Address(id, &sock));
+
+    butil::IOBuf content;
+    content.append("hello");
+    brpc::HttpHeader header;
+    header.set_method(brpc::HTTP_METHOD_POST);
+    header.uri().set_path("/HttpService/Expect");
+    header.SetHeader("Expect", "100-continue");
+    header.SetHeader("Content-Length", std::to_string(content.size()));
+    butil::IOBuf header_buf;
+    MakeHttpRequestHeaders(&header_buf, &header, ep);
+    LOG(INFO) << butil::ToPrintableString(header_buf);
+    butil::IOBuf request_buf(header_buf);
+    request_buf.append(content);
+
+    ASSERT_EQ(0, sock->Write(&header_buf));
+    int64_t start_time = butil::gettimeofday_us();
+    while (sock->fd() < 0) {
+        bthread_usleep(1000);
+        ASSERT_LT(butil::gettimeofday_us(), start_time + 1000000L) << "Too long!";
+    }
+    // 100 Continue
+    brpc::DestroyingPtr<brpc::policy::HttpContext> imsg_guard;
+    ReadOneResponse(sock, imsg_guard);
+    ASSERT_EQ(imsg_guard->header().status_code(), brpc::HTTP_STATUS_CONTINUE);
+
+    ASSERT_EQ(0, sock->Write(&content));
+    // 200 Ok
+    ReadOneResponse(sock, imsg_guard);
+    ASSERT_EQ(imsg_guard->header().status_code(), brpc::HTTP_STATUS_OK);
+
+    ASSERT_EQ(0, sock->Write(&request_buf));
+    // 200 Ok
+    ReadOneResponse(sock, imsg_guard);
+    ASSERT_EQ(imsg_guard->header().status_code(), brpc::HTTP_STATUS_OK);
 }
 
 } //namespace

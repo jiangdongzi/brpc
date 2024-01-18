@@ -114,7 +114,6 @@ set(DYNAMIC_LIB
     ${OPENSSL_CRYPTO_LIBRARY}
     ${OPENSSL_SSL_LIBRARY}
     ${THRIFT_LIB}
-    ${THRIFTNB_LIB}
     dl
     )
 
@@ -130,6 +129,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         "-Wl,-U,_MallocExtension_ReleaseFreeMemory"
         "-Wl,-U,_ProfilerStart"
         "-Wl,-U,_ProfilerStop"
+        "-Wl,-U,__Z13GetStackTracePPvii"
         "-Wl,-U,_RegisterThriftProtocol")
 endif()
 

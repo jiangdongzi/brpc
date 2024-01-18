@@ -196,6 +196,7 @@ if [ "$SYSTEM" = "Darwin" ]; then
 	DYNAMIC_LINKINGS="$DYNAMIC_LINKINGS -Wl,-U,_MallocExtension_ReleaseFreeMemory"
 	DYNAMIC_LINKINGS="$DYNAMIC_LINKINGS -Wl,-U,_ProfilerStart"
 	DYNAMIC_LINKINGS="$DYNAMIC_LINKINGS -Wl,-U,_ProfilerStop"
+  DYNAMIC_LINKINGS="$DYNAMIC_LINKINGS -Wl,-U,__Z13GetStackTracePPvii"
 	DYNAMIC_LINKINGS="$DYNAMIC_LINKINGS -Wl,-U,_RegisterThriftProtocol"
 fi
 append_linking() {
@@ -351,6 +352,16 @@ if [ $WITH_THRIFT != 0 ]; then
         append_to_output "DYNAMIC_LINKINGS+=-lthriftnb -levent -lthrift"
     else
         append_to_output "STATIC_LINKINGS+=-lthriftnb"
+    fi
+    # get thrift version
+    thrift_version=$(thrift --version | awk '{print $3}')
+    major=$(echo "$thrift_version" | awk -F '.' '{print $1}')
+    minor=$(echo "$thrift_version" | awk -F '.' '{print $2}')
+    if [ $((major)) -eq 0 -a $((minor)) -lt 11 ]; then
+        CPPFLAGS="${CPPFLAGS} -D_THRIFT_VERSION_LOWER_THAN_0_11_0_"
+        echo "less"
+    else
+        echo "greater"
     fi
 fi
 
