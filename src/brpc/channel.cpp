@@ -413,7 +413,7 @@ void Channel::CallMethod(const google::protobuf::MethodDescriptor* method,
     const int64_t start_send_real_us = butil::gettimeofday_us();
     Controller* cntl = static_cast<Controller*>(controller_base);
     cntl->OnRPCBegin(start_send_real_us);
-    if (method !=- NULL) {
+    if (method != nullptr) {
         cntl->_method_name = method->full_name();
     }
     // Override max_retry first to reset the range of correlation_id
