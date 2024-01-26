@@ -79,6 +79,10 @@ endif()
 set(CMAKE_CPP_FLAGS "${DEFINE_CLOCK_GETTIME} -DGFLAGS_NS=${GFLAGS_NS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CPP_FLAGS} -DNDEBUG -O2 -D__const__=__unused__ -pipe -W -Wall -Wno-unused-parameter -fPIC -fno-omit-frame-pointer")
 
+find_path(GPERFTOOLS_INCLUDE_DIR NAMES gperftools/heap-profiler.h)
+find_library(GPERFTOOLS_LIBRARIES NAMES tcmalloc_and_profiler)
+include_directories(${GPERFTOOLS_INCLUDE_DIR})
+
 if(CMAKE_VERSION VERSION_LESS "3.1.3")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -136,3 +140,4 @@ endif()
 add_executable(memcache_client client.cpp)
 
 target_link_libraries(memcache_client ${BRPC_LIB} ${DYNAMIC_LIB})
+target_link_libraries(memcache_client ${BRPC_LIB} ${DYNAMIC_LIB} ${GPERFTOOLS_LIBRARIES})

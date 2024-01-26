@@ -28,6 +28,10 @@ DECLARE_int32(bvar_latency_p1);
 DECLARE_int32(bvar_latency_p2);
 DECLARE_int32(bvar_latency_p3);
 
+DECLARE_int32(bvar_count_p1);
+DECLARE_int32(bvar_count_p2);
+DECLARE_int32(bvar_count_p3);
+
 static const std::string ALLOW_UNUSED METRIC_TYPE_COUNTER = "counter";
 static const std::string ALLOW_UNUSED METRIC_TYPE_SUMMARY = "summary";
 static const std::string ALLOW_UNUSED METRIC_TYPE_HISTOGRAM = "histogram";
@@ -343,6 +347,85 @@ size_t MultiDimension<bvar::LatencyRecorder>::dump(Dumper* dumper, const DumpOpt
     }
     return n;
 }
+
+template <>
+inline
+size_t MultiDimension<bvar::CountRecorder>::dump(Dumper* dumper, const DumpOptions*) {
+    std::vector<key_type> label_names;
+    list_stats(&label_names);
+    if (label_names.empty()) {
+        return 0;
+    }
+    size_t n = 0;
+    for (auto &label_name : label_names) {
+        bvar::CountRecorder* bvar = get_stats_impl(label_name);
+        if (!bvar) {
+            continue;
+        }
+
+        // count comment
+        if (!dumper->dump_comment(name() + "_count", METRIC_TYPE_GAUGE)) {
+            continue;
+        }
+        // count
+        std::ostringstream oss_count_key;
+        make_dump_key(oss_count_key, label_name, "_count");
+        if (dumper->dump(oss_count_key.str(), std::to_string(bvar->count()))) {
+            n++;
+        }
+        // count_percentiles
+        // p1/p2/p3
+        int count_percentiles[3] {FLAGS_bvar_count_p1, FLAGS_bvar_count_p2, FLAGS_bvar_count_p3};
+        for (auto lp : count_percentiles) {
+            std::ostringstream oss_lp_key;
+            make_dump_key(oss_lp_key, label_name, "_count", lp);
+            if (dumper->dump(oss_lp_key.str(), std::to_string(bvar->count_percentile(lp / 100.0)))) {
+                n++;
+            }
+        }
+        // 999
+        std::ostringstream oss_p999_key;
+        make_dump_key(oss_p999_key, label_name, "_count", 999);
+        if (dumper->dump(oss_p999_key.str(), std::to_string(bvar->count_percentile(0.999)))) {
+            n++;
+        }
+        // 9999
+        std::ostringstream oss_p9999_key;
+        make_dump_key(oss_p9999_key, label_name, "_count", 9999);
+        if (dumper->dump(oss_p9999_key.str(), std::to_string(bvar->count_percentile(0.9999)))) {
+            n++;
+        }
+
+        // max_count comment
+        if (!dumper->dump_comment(name() + "_max_count", METRIC_TYPE_GAUGE)) {
+            continue;
+        }
+        // max_count
+        std::ostringstream oss_max_count_key;
+        make_dump_key(oss_max_count_key, label_name, "_max_count");
+        if (dumper->dump(oss_max_count_key.str(), std::to_string(bvar->max_count()))) {
+            n++;
+        }
+        
+        // qps comment
+        if (!dumper->dump_comment(name() + "_qps", METRIC_TYPE_GAUGE)) {
+            continue;
+        }
+        // qps
+        std::ostringstream oss_qps_key;
+        make_dump_key(oss_qps_key, label_name, "_qps");
+        if (dumper->dump(oss_qps_key.str(), std::to_string(bvar->qps()))) {
+            n++;
+        }
+
+        // qps comment
+        if (!dumper->dump_comment(name() + "_count", METRIC_TYPE_COUNTER)) {
+            continue;
+        }
+    }
+    return n;
+}
+
 
 template <typename T>
 inline
