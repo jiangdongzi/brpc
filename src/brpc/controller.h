@@ -596,6 +596,8 @@ public:
 
     const std::string& thrift_method_name() { return _thrift_method_name; }
 
+    const std::string& method_name() { return _method_name; }
+
     // Get sock option. .e.g get vip info through ttm kernel module hook,
     int GetSockOption(int level, int optname, void* optval, socklen_t* optlen);
 
@@ -876,6 +878,8 @@ private:
     uint32_t _auth_flags;
 
     AfterRpcRespFnType _after_rpc_resp_fn;
+
+    std::string _method_name;
 };
 
 // Advises the RPC system that the caller desires that the RPC call be
