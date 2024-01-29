@@ -135,4 +135,33 @@ std::ostream& operator<<(std::ostream& os, const CountRecorder&);
 
 }  // namespace bvar
 
+#define INIT_COUNT_RECORDER(name, bvar_name, ...) \
+    static thread_local butil::FlatMap<std::string, bvar::CountRecorder*> tls_##name##_count_recorder; \
+    static butil::FlatMap<std::string, bvar::CountRecorder*> name##_count_recorder; \
+    static std::mutex name##count_recorder_mt; \
+    static bvar::MultiDimension<bvar::CountRecorder> name##count_recorder_bvar(bvar_name, {__VA_ARGS__}); \
+    class name##_count_recorder##InitHelper { \
+    public:    \
+        name##_count_recorder##InitHelper() {    \
+            tls_##name##_count_recorder.init(512); \
+            name##_count_recorder.init(512); \
+        } \
+    };  \
+    name##_count_recorder##InitHelper name##_count_recorder##initHelper;
+
+#define GET_COUNT_RECORDER(name, hash_key, ...) \
+    [&]() -> bvar::CountRecorder& { \
+        auto* valptr = tls_##name##_count_recorder.seek(hash_key); \
+        if (valptr != nullptr) { \
+            return *(*valptr); \
+        }  \
+        std::lock_guard<std::mutex> lock(name##count_recorder_mt); \
+        valptr = name##_count_recorder.seek(hash_key); \
+        if (valptr == nullptr) { \
+            std::list<std::string> label_values = {__VA_ARGS__}; \
+            name##_count_recorder.insert(hash_key, name##count_recorder_bvar.get_stats(label_values)); \
+        } \
+        return *name##_count_recorder[hash_key]; \
+    }()
+
 #endif  //BVAR_COUNT_RECORDER_H
