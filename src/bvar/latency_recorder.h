@@ -161,33 +161,4 @@ std::ostream& operator<<(std::ostream& os, const LatencyRecorder&);
 
 }  // namespace bvar
 
-#define INIT_LATENCY_RECORDER(name, bvar_name, ...) \
-    static thread_local butil::FlatMap<std::string, bvar::LatencyRecorder*> tls_##name##_latency_recorder; \
-    static butil::FlatMap<std::string, bvar::LatencyRecorder*> name##_latency_recorder; \
-    static std::mutex name##latency_recorder_mt; \
-    static bvar::MultiDimension<bvar::LatencyRecorder> name##latency_recorder_bvar(bvar_name, {__VA_ARGS__}); \
-    class name##_latency_recorder##InitHelper { \
-    public:    \
-        name##_latency_recorder##InitHelper() {    \
-            tls_##name##_latency_recorder.init(512); \
-            name##_latency_recorder.init(512); \
-        } \
-    };  \
-    name##_latency_recorder##InitHelper name##_latency_recorder##initHelper;
-
-#define GET_LATENCY_RECORDER(name, hash_key, ...) \
-    [&]() -> bvar::LatencyRecorder& { \
-        auto* valptr = tls_##name##_latency_recorder.seek(hash_key); \
-        if (valptr != nullptr) { \
-            return *(*valptr); \
-        }  \
-        std::lock_guard<std::mutex> lock(name##latency_recorder_mt); \
-        valptr = name##_latency_recorder.seek(hash_key); \
-        if (valptr == nullptr) { \
-            std::list<std::string> label_values = {__VA_ARGS__}; \
-            name##_latency_recorder.insert(hash_key, name##latency_recorder_bvar.get_stats(label_values)); \
-        } \
-        return *name##_latency_recorder[hash_key]; \
-    }()
-
 #endif  //BVAR_LATENCY_RECORDER_H
