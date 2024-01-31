@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package brpc_metrics;
+option go_package = "./;brpc_metrics";
+option cc_generic_services = true;
+
+message Metric {
+    string key = 1;
+    string value = 2;
+}
+
+message MetricRequest {
+    repeated Metric metric = 1;
+}
+
+message MetricResponse {
+    string msg = 1;
+}
+
+service MetricService {
+    rpc CollectMetrics(MetricRequest) returns (MetricResponse);
+}
