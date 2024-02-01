@@ -49,7 +49,7 @@ static void* dump_bvar(void* arg) {
     if (d.req.metric_size() > 0) {
       reqs.emplace_back(std::move(d.req));
     }
-    if (d.reqs.empty()) continue;
+    if (reqs.empty()) continue;
     static brpc::Channel& channel = GetPrometheusChannel(*pushgateway_server_ptr);
     brpc_metrics::MetricResponse rsp;
     brpc_metrics::MetricService_Stub stub(&channel);
