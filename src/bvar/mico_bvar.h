@@ -5,6 +5,7 @@
 
 void start_stat_bvar(const std::string& pushgateway_server);
 bvar::LatencyRecorder& get_latency_recorder(const std::string& metric_name);
+bvar::CountRecorder& get_count_recorder (const std::string& metric_name);
 
 class LatencyRecorderGuard {
     bvar::LatencyRecorder* _recorder;

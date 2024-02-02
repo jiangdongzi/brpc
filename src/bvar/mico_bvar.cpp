@@ -68,19 +68,6 @@ static void* dump_bvar(void* arg) {
   return nullptr;
 }
 
-static void start_stat_bvar_internal(const std::string& pushgateway_server) {
-    google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
-    google::SetCommandLineOption("bvar_dump_interval", "180");
-    std::unique_ptr<std::string> pushgateway_server_ptr(new std::string(pushgateway_server));
-    bthread_t bvar_stat_tid;
-    bthread_start_background(&bvar_stat_tid, nullptr, dump_bvar, pushgateway_server_ptr.release());
-}
-
-void start_stat_bvar(const std::string& pushgateway_server) {
-  static std::once_flag flag;
-  std::call_once(flag, start_stat_bvar_internal, pushgateway_server);
-}
-
 std::string brpc_get_host_name(){
     char name[256];
     gethostname(name, sizeof(name));
@@ -99,46 +86,68 @@ std::string brpc_get_app_name(){
     return app_name;
 }
 
-static thread_local butil::FlatMap<std::string, bvar::LatencyRecorder*> tls_latency_recorder;
-static butil::FlatMap<std::string, bvar::LatencyRecorder*> g_latency_recorder;
+template <typename R>
+struct RecorderMap {
+  static thread_local butil::FlatMap<std::string, R*> tls_recorder;
+  static butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>> g_multiDimension;
+  static void init() {
+    g_multiDimension.init(512);
+  }
+};
+
+template <typename R>
+thread_local butil::FlatMap<std::string, R*> RecorderMap<R>::tls_recorder;
+
+template <typename R>
+butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>> RecorderMap<R>::g_multiDimension;
+
 static std::string app_name;
 static std::string host_name;
 static std::list<std::string> svr_identity;
 static std::list<std::string> svr_identity_label_name {"app_name", "host_name"};
-class LatencyRecorderInitHelper {
-public:
-    LatencyRecorderInitHelper() {
-        g_latency_recorder.init(512);
-        app_name = brpc_get_app_name();
-        host_name = brpc_get_host_name();
-        svr_identity = {app_name, host_name};
-    }
-};
-static LatencyRecorderInitHelper latencyrecorderinithelper;
 
-class TLSLatencyRecorderInitHelper {
-public:
-    TLSLatencyRecorderInitHelper() {
-        tls_latency_recorder.init(512);
-    }
-};
+template <typename R>
+R& get_recorder(const std::string& metric_name) {
+  if (!RecorderMap<R>::tls_recorder.initialized()) {
+    RecorderMap<R>::tls_recorder.init(512);
+  }
+  auto* valptr = RecorderMap<R>::tls_recorder.seek(metric_name);
+  if (valptr != nullptr) {
+      return *(*valptr);
+  }
+  static std::mutex mtx;
+  std::lock_guard<std::mutex> lock(mtx);
+  if (RecorderMap<R>::g_multiDimension.seek(metric_name) == nullptr) {
+    RecorderMap<R>::g_multiDimension[metric_name].reset(new bvar::MultiDimension<R>(metric_name, svr_identity_label_name));
+  }
+  RecorderMap<R>::tls_recorder[metric_name] = RecorderMap<R>::g_multiDimension[metric_name]->get_stats(svr_identity);
+  return *RecorderMap<R>::tls_recorder[metric_name];
+}
 
-static thread_local TLSLatencyRecorderInitHelper tlslatencyrecorderinithelper;
+bvar::LatencyRecorder& get_latency_recorder (const std::string& metric_name) {
+  return get_recorder<bvar::LatencyRecorder>(metric_name);
+}
 
-static std::vector<std::unique_ptr<bvar::MultiDimension<bvar::LatencyRecorder>>> mul_latency_recorder_holder;
-bvar::LatencyRecorder& get_latency_recorder(const std::string& metric_name) {
-    auto* valptr = tls_latency_recorder.seek(metric_name);
-    if (valptr != nullptr) {
-        return *(*valptr);
-    }
-    static std::mutex latency_recorder_mt;
-    std::lock_guard<std::mutex> lock(latency_recorder_mt);
-    valptr = g_latency_recorder.seek(metric_name);
-    if (valptr == nullptr) {
-        mul_latency_recorder_holder.emplace_back(new bvar::MultiDimension<bvar::LatencyRecorder>(metric_name, svr_identity_label_name));
-        g_latency_recorder[metric_name] = mul_latency_recorder_holder.back()->get_stats(svr_identity);
-        valptr = g_latency_recorder.seek(metric_name);
-    }
-    tls_latency_recorder[metric_name] = *valptr;
-    return *(*valptr);
+bvar::CountRecorder& get_count_recorder (const std::string& metric_name) {
+  return get_recorder<bvar::CountRecorder>(metric_name);
+}
+
+static void start_stat_bvar_internal(const std::string& pushgateway_server) {
+    google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
+    google::SetCommandLineOption("bvar_dump_interval", "180");
+    std::unique_ptr<std::string> pushgateway_server_ptr(new std::string(pushgateway_server));
+
+    RecorderMap<bvar::LatencyRecorder>::init();
+    RecorderMap<bvar::CountRecorder>::init();
+    app_name = brpc_get_app_name();
+    host_name = brpc_get_host_name();
+    svr_identity = {app_name, host_name};
+
+    bthread_t bvar_stat_tid;
+    bthread_start_background(&bvar_stat_tid, nullptr, dump_bvar, pushgateway_server_ptr.release());
+}
+
+void start_stat_bvar(const std::string& pushgateway_server) {
+  static std::once_flag flag;
+  std::call_once(flag, start_stat_bvar_internal, pushgateway_server);
 }
