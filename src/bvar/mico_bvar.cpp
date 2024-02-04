@@ -117,6 +117,9 @@ R& get_recorder(const std::string& metric_name) {
   }
   static std::mutex mtx;
   std::lock_guard<std::mutex> lock(mtx);
+  if (!RecorderMap<R>::g_multiDimension.initialized()) {
+    RecorderMap<R>::init();
+  }
   if (RecorderMap<R>::g_multiDimension.seek(metric_name) == nullptr) {
     RecorderMap<R>::g_multiDimension[metric_name].reset(new bvar::MultiDimension<R>(metric_name, svr_identity_label_name));
   }
