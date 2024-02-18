@@ -56,6 +56,10 @@ static int64_t get_window_recorder_qps(void* arg) {
     return double_to_random_int(s.data.num * 1000000.0 / s.time_us);
 }
 
+static int64_t get_recorder_total(void* arg) {
+    return static_cast<IntRecorder*>(arg)->get_value().num;
+}
+
 // Caller is responsible for deleting the return value.
 static CombinedPercentileSamples* combine(PercentileWindow* w) {
     CombinedPercentileSamples* cb = new CombinedPercentileSamples;
@@ -88,6 +92,7 @@ CountRecorderBase::CountRecorderBase(time_t window_size)
     : _max_count(0)
     , _count_window(&_count, window_size)
     , _max_count_window(&_max_count, window_size)
+    , _total(get_recorder_total, &_count)
     , _qps(get_window_recorder_qps, &_count_window)
     , _count_percentile_window(&_count_percentile, window_size)
     , _count_p1(get_p1, this)
@@ -117,14 +122,6 @@ int CountRecorder::expose(const butil::StringPiece& prefix1,
         return -1;
     }
     butil::StringPiece prefix = prefix2;
-    // User may add "_count" as the suffix, remove it.
-    if (prefix.ends_with("count") || prefix.ends_with("Count")) {
-        prefix.remove_suffix(5);
-        if (prefix.empty()) {
-            LOG(ERROR) << "Invalid prefix2=" << prefix2;
-            return -1;
-        }
-    }
     std::string tmp;
     if (!prefix1.empty()) {
         tmp.reserve(prefix1.size() + prefix.size() + 1);
@@ -138,32 +135,37 @@ int CountRecorder::expose(const butil::StringPiece& prefix1,
     _count.set_debug_name(prefix);
     _count_percentile.set_debug_name(prefix);
 
-    if (_count_window.expose_as(prefix, "count") != 0) {
+    if (_count_window.expose(prefix) != 0) {
         return -1;
     }
-    if (_max_count_window.expose_as(prefix, "max_count") != 0) {
+    if (_max_count_window.expose_as(prefix, "max") != 0) {
         return -1;
     }
+
+    if (_total.expose_as(prefix, "total") != 0) {
+        return -1;
+    }
+
     if (_qps.expose_as(prefix, "qps") != 0) {
         return -1;
     }
     char namebuf[32];
-    snprintf(namebuf, sizeof(namebuf), "count_%d", (int)FLAGS_bvar_count_p1);
+    snprintf(namebuf, sizeof(namebuf), "%d", (int)FLAGS_bvar_count_p1);
     if (_count_p1.expose_as(prefix, namebuf, DISPLAY_ON_PLAIN_TEXT) != 0) {
         return -1;
     }
-    snprintf(namebuf, sizeof(namebuf), "count_%d", (int)FLAGS_bvar_count_p2);
+    snprintf(namebuf, sizeof(namebuf), "%d", (int)FLAGS_bvar_count_p2);
     if (_count_p2.expose_as(prefix, namebuf, DISPLAY_ON_PLAIN_TEXT) != 0) {
         return -1;
     }
-    snprintf(namebuf, sizeof(namebuf), "count_%u", (int)FLAGS_bvar_count_p3);
+    snprintf(namebuf, sizeof(namebuf), "%u", (int)FLAGS_bvar_count_p3);
     if (_count_p3.expose_as(prefix, namebuf, DISPLAY_ON_PLAIN_TEXT) != 0) {
         return -1;
     }
-    if (_count_999.expose_as(prefix, "count_999", DISPLAY_ON_PLAIN_TEXT) != 0) {
+    if (_count_999.expose_as(prefix, "999", DISPLAY_ON_PLAIN_TEXT) != 0) {
         return -1;
     }
-    if (_count_9999.expose_as(prefix, "count_9999") != 0) {
+    if (_count_9999.expose_as(prefix, "9999") != 0) {
         return -1;
     }
     snprintf(namebuf, sizeof(namebuf), "%d%%,%d%%,%d%%,99.9%%",

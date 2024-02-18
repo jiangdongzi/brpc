@@ -59,6 +59,7 @@ protected:
 
     RecorderWindow _count_window;
     MaxWindow _max_count_window;
+    PassiveStatus<int64_t> _total;
     PassiveStatus<int64_t> _qps;
     PercentileWindow _count_percentile_window;
     PassiveStatus<int64_t> _count_p1;
