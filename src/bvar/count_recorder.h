@@ -121,6 +121,9 @@ public:
     // Get the max count in recent window_size-to-ctor seconds.
     int64_t max_count() const { return _max_count_window.get_value(); }
 
+    // Get the total number of recorded latencies.
+    int64_t total() const { return _count.get_value().num; }
+
     // Get qps in recent |window_size| seconds. The `q' means counts
     // recorded by operator<<().
     // If |window_size| is absent, use the window_size to ctor.
