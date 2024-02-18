@@ -425,7 +425,7 @@ size_t MultiDimension<bvar::CountRecorder>::dump(Dumper* dumper, const DumpOptio
 
         // total
         std::ostringstream oss_total_key;
-        make_dump_key(oss_total_key, label_name, "_total");
+        make_dump_key(oss_total_key, label_name, "_count");
         if (dumper->dump(oss_total_key.str(), std::to_string(bvar->total()))) {
             n++;
         }
