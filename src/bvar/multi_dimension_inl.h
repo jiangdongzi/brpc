@@ -369,7 +369,7 @@ size_t MultiDimension<bvar::CountRecorder>::dump(Dumper* dumper, const DumpOptio
         }
         // count
         std::ostringstream oss_count_key;
-        make_dump_key(oss_count_key, label_name, "_count");
+        make_dump_key(oss_count_key, label_name, "");
         if (dumper->dump(oss_count_key.str(), std::to_string(bvar->count()))) {
             n++;
         }
@@ -378,31 +378,31 @@ size_t MultiDimension<bvar::CountRecorder>::dump(Dumper* dumper, const DumpOptio
         int count_percentiles[3] {FLAGS_bvar_count_p1, FLAGS_bvar_count_p2, FLAGS_bvar_count_p3};
         for (auto lp : count_percentiles) {
             std::ostringstream oss_lp_key;
-            make_dump_key(oss_lp_key, label_name, "_count", lp);
+            make_dump_key(oss_lp_key, label_name, "", lp);
             if (dumper->dump(oss_lp_key.str(), std::to_string(bvar->count_percentile(lp / 100.0)))) {
                 n++;
             }
         }
         // 999
         std::ostringstream oss_p999_key;
-        make_dump_key(oss_p999_key, label_name, "_count", 999);
+        make_dump_key(oss_p999_key, label_name, "", 999);
         if (dumper->dump(oss_p999_key.str(), std::to_string(bvar->count_percentile(0.999)))) {
             n++;
         }
         // 9999
         std::ostringstream oss_p9999_key;
-        make_dump_key(oss_p9999_key, label_name, "_count", 9999);
+        make_dump_key(oss_p9999_key, label_name, "", 9999);
         if (dumper->dump(oss_p9999_key.str(), std::to_string(bvar->count_percentile(0.9999)))) {
             n++;
         }
 
         // max_count comment
-        if (!dumper->dump_comment(name() + "_max_count", METRIC_TYPE_GAUGE)) {
+        if (!dumper->dump_comment(name() + "", METRIC_TYPE_GAUGE)) {
             continue;
         }
         // max_count
         std::ostringstream oss_max_count_key;
-        make_dump_key(oss_max_count_key, label_name, "_max_count");
+        make_dump_key(oss_max_count_key, label_name, "_max");
         if (dumper->dump(oss_max_count_key.str(), std::to_string(bvar->max_count()))) {
             n++;
         }
@@ -421,6 +421,13 @@ size_t MultiDimension<bvar::CountRecorder>::dump(Dumper* dumper, const DumpOptio
         // qps comment
         if (!dumper->dump_comment(name() + "_count", METRIC_TYPE_COUNTER)) {
             continue;
+        }
+
+        // total
+        std::ostringstream oss_total_key;
+        make_dump_key(oss_total_key, label_name, "_total");
+        if (dumper->dump(oss_total_key.str(), std::to_string(bvar->_total()))) {
+            n++;
         }
     }
     return n;
