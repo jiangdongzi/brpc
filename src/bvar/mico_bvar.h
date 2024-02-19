@@ -27,4 +27,6 @@ inline void SetCountRecorder(const std::string& metric_name, const int64_t count
     get_count_recorder(metric_name) << count;
 }
 
+void SetStatusBvarValue(const std::string& metric_name, const int value);
+
 #endif //MICO_BVAR_H

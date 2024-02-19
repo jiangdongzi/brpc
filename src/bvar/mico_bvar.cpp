@@ -138,6 +138,15 @@ bvar::CountRecorder& get_count_recorder (const std::string& metric_name) {
   return get_recorder<bvar::CountRecorder>(metric_name);
 }
 
+//just a bvar, not recorder, just use recorder code, maybe we can change the misleading name(recorder)
+static bvar::Status<int>& get_status_bvar(const std::string& metric_name) {
+  return get_recorder<bvar::Status<int>>(metric_name);
+}
+
+void SetStatusBvarValue(const std::string& metric_name, const int value) {
+  get_status_bvar(metric_name).set_value(value);
+}
+
 static void start_stat_bvar_internal(const std::string& pushgateway_server) {
     google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
     google::SetCommandLineOption("bvar_dump_interval", "180");
