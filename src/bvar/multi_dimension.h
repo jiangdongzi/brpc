@@ -81,8 +81,9 @@ public:
 
     // Get real bvar pointer object
     // Return real bvar pointer on success, NULL otherwise.
-    T* get_stats(const key_type& labels_value) {
-        return get_stats_impl(labels_value, READ_OR_INSERT);
+    template<typename... Args>
+    T* get_stats(const key_type& labels_value, Args... args) {
+        return get_stats_impl(labels_value, READ_OR_INSERT, nullptr, args...);
     }
 
     // Remove stat so those not count and dump
@@ -119,7 +120,8 @@ public:
 private:
     T* get_stats_impl(const key_type& labels_value);
 
-    T* get_stats_impl(const key_type& labels_value, STATS_OP stats_op, bool* do_write = NULL);
+    template<typename... Args>
+    T* get_stats_impl(const key_type& labels_value, STATS_OP stats_op, bool* do_write, Args... args);
 
     void make_dump_key(std::ostream& os, 
                        const key_type& labels_value, 
