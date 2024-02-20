@@ -175,8 +175,9 @@ T* MultiDimension<T>::get_stats_impl(const key_type& labels_value) {
 }
 
 template <typename T>
+template <typename... Args>
 inline
-T* MultiDimension<T>::get_stats_impl(const key_type& labels_value, STATS_OP stats_op, bool* do_write) {
+T* MultiDimension<T>::get_stats_impl(const key_type& labels_value, STATS_OP stats_op, bool* do_write, Args... args) {
     if (!is_valid_lables_value(labels_value)) {
         return nullptr;
     }
@@ -204,7 +205,7 @@ T* MultiDimension<T>::get_stats_impl(const key_type& labels_value, STATS_OP stat
     // In order to avoid new duplicate bvar object, need use cache_metric to cache the new bvar object,
     // In this way, when modifying the second copy, can directly use the cache_metric bvar object.
     op_value_type cache_metric = NULL;
-    auto insert_fn = [&labels_value, &cache_metric, &do_write](MetricMap& bg) {
+    auto insert_fn = [&labels_value, &cache_metric, &do_write, &args...](MetricMap& bg) {
         auto bg_metric = bg.seek(labels_value);
         if (NULL != bg_metric) {
             cache_metric = *bg_metric;
@@ -216,7 +217,7 @@ T* MultiDimension<T>::get_stats_impl(const key_type& labels_value, STATS_OP stat
         if (NULL != cache_metric) {
             bg.insert(labels_value, cache_metric);
         } else {
-            T* add_metric = new T();
+            T* add_metric = new T(args...);
             bg.insert(labels_value, add_metric);
             cache_metric = add_metric;
         }
