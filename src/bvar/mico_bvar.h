@@ -6,6 +6,7 @@
 void start_stat_bvar(const std::string& pushgateway_server);
 bvar::LatencyRecorder& get_latency_recorder(const std::string& metric_name);
 bvar::CountRecorder& get_count_recorder (const std::string& metric_name);
+bvar::WindowEx<bvar::IntRecorder, 20>& get_win_mean_recorder (const std::string& metric_name);
 
 class LatencyRecorderGuard {
     bvar::LatencyRecorder* _recorder;
@@ -25,6 +26,10 @@ class LatencyRecorderGuard {
 
 inline void SetCountRecorder(const std::string& metric_name, const int64_t count = 1) {
     get_count_recorder(metric_name) << count;
+}
+
+inline void SetWinMeanRecorder(const std::string& metric_name, const int64_t count = 1) {
+    get_win_mean_recorder(metric_name) << count;
 }
 
 void SetStatusBvarValue(const std::string& metric_name, const int value);
