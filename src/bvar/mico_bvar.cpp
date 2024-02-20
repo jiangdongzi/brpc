@@ -118,6 +118,11 @@ R& get_recorder(const std::string& metric_name) {
   if (valptr != nullptr) {
       return *(*valptr);
   }
+
+  if (svr_identity.empty()) {
+    throw std::runtime_error("you should call start_stat_bvar before");
+  }
+
   static std::mutex mtx;
   std::lock_guard<std::mutex> lock(mtx);
   if (!RecorderMap<R>::g_multiDimension.initialized()) {
@@ -145,6 +150,10 @@ static bvar::Status<int>& get_status_bvar(const std::string& metric_name) {
 
 void SetStatusBvarValue(const std::string& metric_name, const int value) {
   get_status_bvar(metric_name).set_value(value);
+}
+
+bvar::WindowEx<bvar::IntRecorder, 20>& get_win_mean_recorder (const std::string& metric_name) {
+  return get_recorder<bvar::WindowEx<bvar::IntRecorder, 20>>(metric_name);
 }
 
 static void start_stat_bvar_internal(const std::string& pushgateway_server) {
