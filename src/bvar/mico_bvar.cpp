@@ -156,6 +156,10 @@ bvar::WindowEx<bvar::IntRecorder, 20>& get_win_mean_recorder (const std::string&
   return get_recorder<bvar::WindowEx<bvar::IntRecorder, 20>>(metric_name);
 }
 
+bvar::Adder<int>& get_adder_bvar(const std::string& metric_name) {
+  return get_recorder<bvar::Adder<int>>(metric_name);
+}
+
 static void start_stat_bvar_internal(const std::string& pushgateway_server) {
     google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
     google::SetCommandLineOption("bvar_dump_interval", "180");

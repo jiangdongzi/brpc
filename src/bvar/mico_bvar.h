@@ -34,4 +34,9 @@ inline void SetWinMeanRecorder(const std::string& metric_name, const int64_t cou
 
 void SetStatusBvarValue(const std::string& metric_name, const int value);
 
+bvar::Adder<int>& get_adder_bvar(const std::string& metric_name);
+inline void IncrAdderBvar(const std::string& metric_name, const int value = 1) {
+    get_adder_bvar(metric_name) << value;
+}
+
 #endif //MICO_BVAR_H
