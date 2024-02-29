@@ -314,12 +314,12 @@ size_t MultiDimension<bvar::LatencyRecorder>::dump(Dumper* dumper, const DumpOpt
         }
 
         // max_latency comment
-        if (!dumper->dump_comment(name() + "_max_latency", METRIC_TYPE_GAUGE)) {
+        if (!dumper->dump_comment(name() + "_latency_max", METRIC_TYPE_GAUGE)) {
             continue;
         }
         // max_latency
         std::ostringstream oss_max_latency_key;
-        make_dump_key(oss_max_latency_key, label_name, "_max_latency");
+        make_dump_key(oss_max_latency_key, label_name, "_latency_max");
         if (dumper->dump(oss_max_latency_key.str(), std::to_string(bvar->max_latency()))) {
             n++;
         }
