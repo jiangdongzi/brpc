@@ -414,7 +414,7 @@ void Channel::CallMethod(const google::protobuf::MethodDescriptor* method,
     Controller* cntl = static_cast<Controller*>(controller_base);
     cntl->OnRPCBegin(start_send_real_us);
     if (method != nullptr) {
-        cntl->_method_name = method->full_name();
+        cntl->_method_name = method->name();
     }
     // Override max_retry first to reset the range of correlation_id
     if (cntl->max_retry() == UNSET_MAGIC_NUM) {

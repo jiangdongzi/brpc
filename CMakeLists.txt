@@ -20,6 +20,7 @@ project(brpc C CXX)
 
 option(WITH_GLOG "With glog" OFF)
 option(WITH_MESALINK "With MesaLink" OFF)
+option(WITH_BORINGSSL "With BoringSSL" OFF)
 option(DEBUG "Print debug logs" OFF)
 option(WITH_DEBUG_SYMBOLS "With debug symbols" ON)
 option(WITH_THRIFT "With thrift framed protocol supported" OFF)
@@ -35,7 +36,7 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif()
 
-set(BRPC_VERSION 1.4.0)
+set(BRPC_VERSION 1.6.0)
 
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "brpc authors")
@@ -67,7 +68,10 @@ endif()
 
 if(WITH_THRIFT)
     set(THRIFT_CPP_FLAG "-DENABLE_THRIFT_FRAMED_PROTOCOL")
-    set(THRIFT_LIB "thrift")
+    find_library(THRIFT_LIB NAMES thrift)
+    if (NOT THRIFT_LIB)
+        message(FATAL_ERROR "Fail to find Thrift")
+    endif()
 endif()
 
 set(WITH_RDMA_VAL "0")
@@ -203,31 +207,24 @@ if(NOT PROTOC_LIB)
     message(FATAL_ERROR "Fail to find protoc lib")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(OPENSSL_ROOT_DIR
-        "/usr/local/opt/openssl"    # Homebrew installed OpenSSL
+if(WITH_BORINGSSL)
+    find_package(BoringSSL)
+    include_directories(${BORINGSSL_INCLUDE_DIR})
+else()
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        set(OPENSSL_ROOT_DIR
+            "/usr/local/opt/openssl" # Homebrew installed OpenSSL
         )
+    endif()
+
+    find_package(OpenSSL)
+    include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
-
-find_package(OpenSSL)
-
-set(LEVELDB_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
-set(LEVELDB_LIB "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libleveldb.a")
-
-set(GFLAGS_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/buildtrees/gflags/x64-linux-rel/include")
-set(GFLAGS_LIBRARY "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libgflags.a")
-
-
-set(PROTOBUF_INCLUDE_DIRS "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
-set(PROTOBUF_LIBRARIES "/data/zhiyuan/mico_codes/miuscxx/thirdparty/lib/libprotobuf.a")
-set(OPENSSL_CRYPTO_LIBRARY "/data/zhiyuan/github/vcpkg/packages/openssl-unix_x64-linux/lib/libcrypto.a")
-
 
 include_directories(
         ${GFLAGS_INCLUDE_PATH}
         ${PROTOBUF_INCLUDE_DIRS}
         ${LEVELDB_INCLUDE_PATH}
-        ${OPENSSL_INCLUDE_DIR}
         )
 
 set(DYNAMIC_LIB
@@ -237,17 +234,19 @@ set(DYNAMIC_LIB
     ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${THRIFT_LIB}
-    ${THRIFTNB_LIB}
-    ${OPENSSL_CRYPTO_LIBRARY}
     dl
     z)
 
-message("ivyjxj.. " ${OPENSSL_CRYPTO_LIBRARY})
-
-if(WITH_MESALINK)
-    list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
+if(WITH_BORINGSSL)
+    list(APPEND DYNAMIC_LIB ${BORINGSSL_SSL_LIBRARY})
+    list(APPEND DYNAMIC_LIB ${BORINGSSL_CRYPTO_LIBRARY})
 else()
-    list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
+    list(APPEND DYNAMIC_LIB ${OPENSSL_CRYPTO_LIBRARY})
+    if(WITH_MESALINK)
+        list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
+    else()
+        list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
+    endif()
 endif()
 
 if(WITH_RDMA)
@@ -280,7 +279,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         "-framework Foundation"
         "-Wl,-U,_MallocExtension_ReleaseFreeMemory"
         "-Wl,-U,_ProfilerStart"
-        "-Wl,-U,_ProfilerStop")
+        "-Wl,-U,_ProfilerStop"
+        "-Wl,-U,__Z13GetStackTracePPvii")
 endif()
 
 # for *.so
@@ -307,6 +307,7 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/at_exit.cc
     ${PROJECT_SOURCE_DIR}/src/butil/atomicops_internals_x86_gcc.cc
     ${PROJECT_SOURCE_DIR}/src/butil/base64.cc
+    ${PROJECT_SOURCE_DIR}/src/butil/base64url.cc
     ${PROJECT_SOURCE_DIR}/src/butil/big_endian.cc
     ${PROJECT_SOURCE_DIR}/src/butil/cpu.cc
     ${PROJECT_SOURCE_DIR}/src/butil/debug/alias.cc
@@ -390,6 +391,7 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/status.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/string_printf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/thread_local.cpp
+    ${PROJECT_SOURCE_DIR}/src/butil/thread_key.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/unix_socket.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/endpoint.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/fd_utility.cpp
@@ -398,7 +400,6 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/time.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/zero_copy_stream_as_streambuf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/crc32c.cc
-    ${PROJECT_SOURCE_DIR}/src/butil/redis_cluster_slot.cc
     ${PROJECT_SOURCE_DIR}/src/butil/containers/case_ignored_flat_map.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/iobuf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/binary_printer.cpp
@@ -456,7 +457,6 @@ set(PROTO_FILES idl_options.proto
                 brpc/get_favicon.proto
                 brpc/span.proto
                 brpc/builtin_service.proto
-                brpc/metric_rpc.proto
                 brpc/grpc_health_check.proto
                 brpc/get_js.proto
                 brpc/errno.proto
