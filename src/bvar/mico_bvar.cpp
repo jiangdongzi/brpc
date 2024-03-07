@@ -92,9 +92,9 @@ std::string brpc_get_app_name(){
 template <typename R>
 struct RecorderMap {
   static thread_local butil::FlatMap<std::string, R*> tls_recorder;
-  static butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>> g_multiDimension;
+  static butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>* g_multiDimension;
   static void init() {
-    g_multiDimension.init(512);
+    g_multiDimension->init(512);
   }
 };
 
@@ -102,12 +102,12 @@ template <typename R>
 thread_local butil::FlatMap<std::string, R*> RecorderMap<R>::tls_recorder;
 
 template <typename R>
-butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>> RecorderMap<R>::g_multiDimension;
+butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>* RecorderMap<R>::g_multiDimension = new butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>();
 
-static std::string app_name;
-static std::string host_name;
-static std::list<std::string> svr_identity;
-static std::list<std::string> svr_identity_label_name {"app_name", "host_name"};
+static std::string app_name = brpc_get_app_name();
+static std::string host_name = brpc_get_host_name();
+static thread_local std::list<std::string> svr_identity {app_name, host_name};
+static thread_local std::list<std::string> svr_identity_label_name {"app_name", "host_name"};
 
 template <typename R>
 R& get_recorder(const std::string& metric_name) {
@@ -125,13 +125,13 @@ R& get_recorder(const std::string& metric_name) {
 
   static std::mutex mtx;
   std::lock_guard<std::mutex> lock(mtx);
-  if (!RecorderMap<R>::g_multiDimension.initialized()) {
+  if (!RecorderMap<R>::g_multiDimension->initialized()) {
     RecorderMap<R>::init();
   }
-  if (RecorderMap<R>::g_multiDimension.seek(metric_name) == nullptr) {
-    RecorderMap<R>::g_multiDimension[metric_name].reset(new bvar::MultiDimension<R>(metric_name, svr_identity_label_name));
+  if (RecorderMap<R>::g_multiDimension->seek(metric_name) == nullptr) {
+    (*RecorderMap<R>::g_multiDimension)[metric_name].reset(new bvar::MultiDimension<R>(metric_name, svr_identity_label_name));
   }
-  RecorderMap<R>::tls_recorder[metric_name] = RecorderMap<R>::g_multiDimension[metric_name]->get_stats(svr_identity);
+  RecorderMap<R>::tls_recorder[metric_name] = (*RecorderMap<R>::g_multiDimension)[metric_name]->get_stats(svr_identity);
   return *RecorderMap<R>::tls_recorder[metric_name];
 }
 
@@ -167,9 +167,6 @@ static void start_stat_bvar_internal(const std::string& pushgateway_server) {
 
     RecorderMap<bvar::LatencyRecorder>::init();
     RecorderMap<bvar::CountRecorder>::init();
-    app_name = brpc_get_app_name();
-    host_name = brpc_get_host_name();
-    svr_identity = {app_name, host_name};
 
     bthread_t bvar_stat_tid;
     bthread_start_background(&bvar_stat_tid, nullptr, dump_bvar, pushgateway_server_ptr.release());
