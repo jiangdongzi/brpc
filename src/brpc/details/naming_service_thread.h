@@ -46,7 +46,7 @@ struct GetNamingServiceThreadOptions {
         : succeed_without_server(false)
         , log_succeed_without_server(true)
         , use_rdma(false)
-        , h2_max_stream_id {0}
+        , h2_max_stream_id (0)
     
     bool succeed_without_server;
     bool log_succeed_without_server;
