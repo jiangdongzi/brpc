@@ -408,6 +408,8 @@ inline int H2Context::AllocateClientStreamId() {
 }
 
 inline bool H2Context::RunOutStreams() const {
+    LOG(INFO) << "RunOutStreams: _last_sent_stream_id=" << _last_sent_stream_id
+        << ", _socket->H2MaxStreamId()=" << _socket->H2MaxStreamId();
     return (_last_sent_stream_id > _socket->H2MaxStreamId() - 2);
 }
 

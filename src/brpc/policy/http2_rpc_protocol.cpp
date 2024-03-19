@@ -429,6 +429,7 @@ int H2Context::TryToInsertStream(int stream_id, H2StreamContext* ctx) {
     if (_goaway_stream_id >= 0 && stream_id > _goaway_stream_id) {
         return 1;
     }
+    LOG(INFO) << "stream_id=" << stream_id << " inserted into _pending_streams" <<;
     H2StreamContext*& sctx = _pending_streams[stream_id];
     if (sctx == NULL) {
         sctx = ctx;
