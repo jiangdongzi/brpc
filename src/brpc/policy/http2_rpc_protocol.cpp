@@ -429,7 +429,7 @@ int H2Context::TryToInsertStream(int stream_id, H2StreamContext* ctx) {
     if (_goaway_stream_id >= 0 && stream_id > _goaway_stream_id) {
         return 1;
     }
-    LOG(INFO) << "stream_id=" << stream_id << " inserted into _pending_streams" <<;
+    LOG(INFO) << "stream_id=" << stream_id << " inserted into _pending_streams";
     H2StreamContext*& sctx = _pending_streams[stream_id];
     if (sctx == NULL) {
         sctx = ctx;
@@ -978,6 +978,7 @@ H2ParseResult H2Context::OnGoAway(
     if (is_client_side()) {
         // The socket will not be selected for further requests.
         _socket->SetLogOff();
+        LOG(INFO) << "ivyjxj last_stream_id=" << last_stream_id;
 
         std::vector<H2StreamContext*> goaway_streams;
         RemoveGoAwayStreams(last_stream_id, &goaway_streams);
