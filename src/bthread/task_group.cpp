@@ -76,6 +76,15 @@ const size_t OFFSET_TABLE[] = {
 #include "bthread/offset_inl.list"
 };
 
+void* (*g_create_span_func)() = NULL;
+
+void* run_create_span_func() {
+    if (g_create_span_func) {
+        return g_create_span_func();
+    }
+    return tls_bls.rpcz_parent_span;
+}
+
 int TaskGroup::get_attr(bthread_t tid, bthread_attr_t* out) {
     TaskMeta* const m = address_meta(tid);
     if (m != NULL) {
@@ -229,6 +238,7 @@ int TaskGroup::init(size_t runqueue_capacity) {
         LOG(FATAL) << "Fail to get TaskMeta";
         return -1;
     }
+    m->sleep_failed = false;
     m->stop = false;
     m->interrupted = false;
     m->about_to_quit = false;
@@ -297,9 +307,6 @@ void TaskGroup::task_runner(intptr_t skip_remained) {
             thread_return = e.value();
         }
 
-        // Group is probably changed
-        g =  BAIDU_GET_VOLATILE_THREAD_LOCAL(tls_task_group);
-
         // TODO: Save thread_return
         (void)thread_return;
 
@@ -321,6 +328,10 @@ void TaskGroup::task_runner(intptr_t skip_remained) {
             tls_bls.keytable = NULL;
             m->local_storage.keytable = NULL; // optional
         }
+
+        // During running the function in TaskMeta and deleting the KeyTable in
+        // return_KeyTable, the group is probably changed.
+        g =  BAIDU_GET_VOLATILE_THREAD_LOCAL(tls_task_group);
 
         // Increase the version and wake up all joiners, if resulting version
         // is 0, change it to 1 to make bthread_t never be 0. Any access
@@ -372,6 +383,7 @@ int TaskGroup::start_foreground(TaskGroup** pg,
         return ENOMEM;
     }
     CHECK(m->current_waiter.load(butil::memory_order_relaxed) == NULL);
+    m->sleep_failed = false;
     m->stop = false;
     m->interrupted = false;
     m->about_to_quit = false;
@@ -381,7 +393,7 @@ int TaskGroup::start_foreground(TaskGroup** pg,
     m->attr = using_attr;
     m->local_storage = LOCAL_STORAGE_INIT;
     if (using_attr.flags & BTHREAD_INHERIT_SPAN) {
-        m->local_storage.rpcz_parent_span = tls_bls.rpcz_parent_span;
+        m->local_storage.rpcz_parent_span = run_create_span_func();
     }
     m->cpuwide_start_ns = start_ns;
     m->stat = EMPTY_STAT;
@@ -431,6 +443,7 @@ int TaskGroup::start_background(bthread_t* __restrict th,
         return ENOMEM;
     }
     CHECK(m->current_waiter.load(butil::memory_order_relaxed) == NULL);
+    m->sleep_failed = false;
     m->stop = false;
     m->interrupted = false;
     m->about_to_quit = false;
@@ -440,7 +453,7 @@ int TaskGroup::start_background(bthread_t* __restrict th,
     m->attr = using_attr;
     m->local_storage = LOCAL_STORAGE_INIT;
     if (using_attr.flags & BTHREAD_INHERIT_SPAN) {
-        m->local_storage.rpcz_parent_span = tls_bls.rpcz_parent_span;
+        m->local_storage.rpcz_parent_span = run_create_span_func();
     }
     m->cpuwide_start_ns = start_ns;
     m->stat = EMPTY_STAT;
@@ -759,7 +772,8 @@ void TaskGroup::_add_sleep_event(void* void_args) {
         butil::microseconds_from_now(e.timeout_us));
 
     if (!sleep_id) {
-        // fail to schedule timer, go back to previous thread.
+        e.meta->sleep_failed = true;
+        // Fail to schedule timer, go back to previous thread.
         g->ready_to_run(e.tid);
         return;
     }
@@ -801,8 +815,9 @@ int TaskGroup::usleep(TaskGroup** pg, uint64_t timeout_us) {
     g->set_remained(_add_sleep_event, &e);
     sched(pg);
     g = *pg;
-    if (e.meta->current_sleep == 0 && !e.meta->interrupted) {
-        // Fail to `_add_sleep_event'.
+    if (e.meta->sleep_failed) {
+        // Fail to schedule timer, return error.
+        e.meta->sleep_failed = false;
         errno = ESTOP;
         return -1;
     }

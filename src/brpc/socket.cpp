@@ -100,6 +100,7 @@ DEFINE_int32(connect_timeout_as_unreachable, 3,
              "fails the main socket as well when this socket is pooled.");
 
 DECLARE_int32(health_check_timeout_ms);
+DECLARE_bool(usercode_in_coroutine);
 
 static bool validate_connect_timeout_as_unreachable(const char*, int32_t v) {
     return v >= 2 && v < 1000/*large enough*/;
@@ -1233,7 +1234,7 @@ int Socket::WaitEpollOut(int fd, bool pollin, const timespec* abstime) {
     // health checker which called `SetFailed' before
     const int expected_val = _epollout_butex->load(butil::memory_order_relaxed);
     EventDispatcher& edisp = GetGlobalEventDispatcher(fd, _bthread_tag);
-    if (edisp.AddEpollOut(id(), fd, pollin) != 0) {
+    if (edisp.RegisterEvent(id(), fd, pollin) != 0) {
         return -1;
     }
 
@@ -1245,7 +1246,7 @@ int Socket::WaitEpollOut(int fd, bool pollin, const timespec* abstime) {
     }
     // Ignore return value since `fd' might have been removed
     // by `RemoveConsumer' in `SetFailed'
-    butil::ignore_result(edisp.RemoveEpollOut(id(), fd, pollin));
+    butil::ignore_result(edisp.UnregisterEvent(id(), fd, pollin));
     errno = saved_errno;
     // Could be writable or spurious wakeup (by former epollout)
     return rc;
@@ -1308,7 +1309,7 @@ int Socket::Connect(const timespec* abstime,
 
         // Add `sockfd' into epoll so that `HandleEpollOutRequest' will
         // be called with `req' when epoll event reaches
-        if (GetGlobalEventDispatcher(sockfd, _bthread_tag).AddEpollOut(connect_id, sockfd, false) !=
+        if (GetGlobalEventDispatcher(sockfd, _bthread_tag).RegisterEvent(connect_id, sockfd, false) !=
             0) {
             const int saved_errno = errno;
             PLOG(WARNING) << "Fail to add fd=" << sockfd << " into epoll";
@@ -1449,7 +1450,7 @@ int Socket::HandleEpollOutRequest(int error_code, EpollOutRequest* req) {
     }
     // We've got the right to call user callback
     // The timer will be removed inside destructor of EpollOutRequest
-    GetGlobalEventDispatcher(req->fd, _bthread_tag).RemoveEpollOut(id(), req->fd, false);
+    GetGlobalEventDispatcher(req->fd, _bthread_tag).UnregisterEvent(id(), req->fd, false);
     return req->on_epollout_event(req->fd, error_code, req->data);
 }
 
@@ -2197,7 +2198,9 @@ int Socket::StartInputEvent(SocketId id, uint32_t events,
         bthread_attr_t attr = thread_attr;
         attr.keytable_pool = p->_keytable_pool;
         attr.tag = bthread_self_tag();
-        if (bthread_start_urgent(&tid, &attr, ProcessEvent, p) != 0) {
+        if (FLAGS_usercode_in_coroutine) {
+            ProcessEvent(p);
+        } else if (bthread_start_urgent(&tid, &attr, ProcessEvent, p) != 0) {
             LOG(FATAL) << "Fail to start ProcessEvent";
             ProcessEvent(p);
         }

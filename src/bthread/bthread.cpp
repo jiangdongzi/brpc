@@ -83,6 +83,7 @@ TaskControl* g_task_control = NULL;
 extern BAIDU_THREAD_LOCAL TaskGroup* tls_task_group;
 extern void (*g_worker_startfn)();
 extern void (*g_tagged_worker_startfn)(bthread_tag_t);
+extern void* (*g_create_span_func)();
 
 inline TaskControl* get_task_control() {
     return g_task_control;
@@ -205,6 +206,7 @@ BUTIL_FORCE_INLINE bool can_run_thread_local(const bthread_attr_t* __restrict at
 struct TidTraits {
     static const size_t BLOCK_SIZE = 63;
     static const size_t MAX_ENTRIES = 65536;
+    static const size_t INIT_GC_SIZE = 65536;
     static const bthread_t ID_INIT;
     static bool exists(bthread_t id) { return bthread::TaskGroup::exists(id); }
 };
@@ -390,7 +392,8 @@ int bthread_setconcurrency_by_tag(int num, bthread_tag_t tag) {
     BAIDU_SCOPED_LOCK(bthread::g_task_control_mutex);
     auto c = bthread::get_task_control();
     if (c == NULL) {
-        return EPERM;
+        bthread::FLAGS_bthread_concurrency_by_tag = 0;
+        return 0;
     }
     auto ngroup = c->concurrency();
     auto tag_ngroup = c->concurrency(tag);
@@ -484,6 +487,14 @@ int bthread_set_tagged_worker_startfn(void (*start_fn)(bthread_tag_t)) {
         return EINVAL;
     }
     bthread::g_tagged_worker_startfn = start_fn;
+    return 0;
+}
+
+int bthread_set_create_span_func(void* (*func)()) {
+    if (func == NULL) {
+        return EINVAL;
+    }
+    bthread::g_create_span_func = func;
     return 0;
 }
 

@@ -58,6 +58,7 @@ TEST_BUTIL_SOURCES = \
     mru_cache_unittest.cc \
     small_map_unittest.cc \
     stack_container_unittest.cc \
+    mpsc_queue_unittest.cc \
     cpu_unittest.cc \
     crash_logging_unittest.cc \
     leak_tracker_unittest.cc \
@@ -144,7 +145,8 @@ TEST_BUTIL_SOURCES = \
     scoped_locale.cc \
     popen_unittest.cpp \
     bounded_queue_unittest.cc \
-    butil_unittest_main.cpp
+    butil_unittest_main.cpp \
+    scope_guard_unittest.cc
 
 ifeq ($(SYSTEM), Linux)
     TEST_BUTIL_SOURCES += test_file_util_linux.cc \

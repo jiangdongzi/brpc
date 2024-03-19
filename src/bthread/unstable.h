@@ -78,6 +78,10 @@ extern int bthread_close(int fd);
 // Replacement of connect(2) in bthreads.
 extern int bthread_connect(int sockfd, const struct sockaddr* serv_addr,
                            socklen_t addrlen);
+// Suspend caller thread until connect(2) on `sockfd' succeeds
+// or CLOCK_REALTIME reached `abstime' if `abstime' is not NULL.
+extern int bthread_timed_connect(int sockfd, const struct sockaddr* serv_addr,
+                                 socklen_t addrlen, const timespec* abstime);
 
 // Add a startup function that each pthread worker will run at the beginning
 // To run code at the end, use butil::thread_atexit()
@@ -86,6 +90,9 @@ extern int bthread_set_worker_startfn(void (*start_fn)());
 
 // Add a startup function with tag
 extern int bthread_set_tagged_worker_startfn(void (*start_fn)(bthread_tag_t));
+
+// Add a create span function
+extern int bthread_set_create_span_func(void* (*func)());
 
 // Stop all bthread and worker pthreads.
 // You should avoid calling this function which may cause bthread after main()
