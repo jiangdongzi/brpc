@@ -345,7 +345,7 @@ int Channel::InitSingle(const butil::EndPoint& server_addr_and_port,
         return -1;
     }
     if (SocketMapInsert(SocketMapKey(server_addr_and_port, sig),
-                        &_server_id, ssl_ctx, _options.use_rdma) != 0) {
+                        &_server_id, ssl_ctx, _options.use_rdma, _options.h2_max_stream_id) != 0) {
         LOG(ERROR) << "Fail to insert into SocketMap";
         return -1;
     }

@@ -222,6 +222,8 @@ struct SocketOptions {
     std::shared_ptr<SocketKeepaliveOptions> keepalive_options;
     // Tag of this socket
     bthread_tag_t bthread_tag;
+
+    int h2_max_stream_id;
 };
 
 // Abstractions on reading from and writing into file descriptors.
@@ -588,6 +590,11 @@ public:
     void set_http_request_method(const HttpMethod& method) { _http_request_method = method; }
     HttpMethod http_request_method() const { return _http_request_method; }
 
+    int H2MaxStreamId() const {
+        return _h2_max_stream_id > 0 ? _h2_max_stream_id : 0x7FFFFFFF;
+    }
+
+
 private:
     DISALLOW_COPY_AND_ASSIGN(Socket);
 
@@ -929,6 +936,8 @@ private:
     std::shared_ptr<SocketKeepaliveOptions> _keepalive_options;
 
     HttpMethod _http_request_method;
+
+    int _h2_max_stream_id;
 };
 
 } // namespace brpc

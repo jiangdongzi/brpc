@@ -408,7 +408,7 @@ inline int H2Context::AllocateClientStreamId() {
 }
 
 inline bool H2Context::RunOutStreams() const {
-    return (_last_sent_stream_id > 0x7FFFFFFF);
+    return (_last_sent_stream_id > _socket->H2MaxStreamId() - 2);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const H2UnsentRequest& req) {

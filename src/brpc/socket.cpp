@@ -676,6 +676,7 @@ int Socket::Create(const SocketOptions& options, SocketId* id) {
     m->_user = options.user;
     m->_conn = options.conn;
     m->_app_connect = options.app_connect;
+    m->_h2_max_stream_id = options.h2_max_stream_id;
     // nref can be non-zero due to concurrent AddressSocket().
     // _this_id will only be used in destructor/Destroy of referenced
     // slots, which is safe and properly fenced. Although it's better
@@ -2856,6 +2857,7 @@ int Socket::GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*)) {
 
         if (_agent_socket_id.compare_exchange_strong(
                 id, tmp_sock->id(), butil::memory_order_acq_rel)) {
+            tmp_sock->_h2_max_stream_id = _h2_max_stream_id;
             out->swap(tmp_sock);
             return 0;
         }

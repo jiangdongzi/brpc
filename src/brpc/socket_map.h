@@ -81,7 +81,7 @@ struct SocketMapKeyHasher {
 // Return 0 on success, -1 otherwise.
 int SocketMapInsert(const SocketMapKey& key, SocketId* id,
                     const std::shared_ptr<SocketSSLContext>& ssl_ctx,
-                    bool use_rdma);
+                    bool use_rdma, int h2_max_stream_id = 0);
 
 inline int SocketMapInsert(const SocketMapKey& key, SocketId* id,
                     const std::shared_ptr<SocketSSLContext>& ssl_ctx) {
@@ -152,7 +152,7 @@ public:
     int Init(const SocketMapOptions&);
     int Insert(const SocketMapKey& key, SocketId* id,
                const std::shared_ptr<SocketSSLContext>& ssl_ctx,
-               bool use_rdma);
+               bool use_rdma, int h2_max_stream_id = 0);
     int Insert(const SocketMapKey& key, SocketId* id,
                const std::shared_ptr<SocketSSLContext>& ssl_ctx) {
         return Insert(key, id, ssl_ctx, false);   
