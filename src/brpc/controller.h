@@ -880,6 +880,8 @@ private:
     AfterRpcRespFnType _after_rpc_resp_fn;
 
     std::string _method_name;
+public:
+    const Call& current_call() const { return _current_call; }
 };
 
 // Advises the RPC system that the caller desires that the RPC call be

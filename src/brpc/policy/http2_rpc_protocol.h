@@ -191,6 +191,7 @@ private:
     Controller* _cntl;
     std::unique_ptr<H2StreamContext> _sctx;
     HPacker::Header _list[0];
+
 };
 
 class H2UnsentResponse : public SocketMessage {
@@ -394,6 +395,8 @@ friend void InitFrameHandlers();
     mutable butil::Mutex _stream_mutex;
     StreamMap _pending_streams;
     butil::atomic<int64_t> _deferred_window_update;
+    int possible_goaway_stream_id;
+    SocketId raw_socket_id;
 };
 
 inline int H2Context::AllocateClientStreamId() {
@@ -408,7 +411,7 @@ inline int H2Context::AllocateClientStreamId() {
 }
 
 inline bool H2Context::RunOutStreams() const {
-    return (_last_sent_stream_id > 0x7FFFFFFF);
+    return (_last_sent_stream_id >= possible_goaway_stream_id);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const H2UnsentRequest& req) {

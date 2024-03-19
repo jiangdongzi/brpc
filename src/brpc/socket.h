@@ -588,6 +588,8 @@ public:
     void set_http_request_method(const HttpMethod& method) { _http_request_method = method; }
     HttpMethod http_request_method() const { return _http_request_method; }
 
+    int possible_h2_max_stream_id;
+
 private:
     DISALLOW_COPY_AND_ASSIGN(Socket);
 

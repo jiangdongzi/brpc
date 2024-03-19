@@ -467,6 +467,7 @@ Socket::Socket(Forbidden)
     , _stream_set(NULL)
     , _total_streams_unconsumed_size(0)
     , _ninflight_app_health_check(0)
+    , possible_h2_max_stream_id (0)
     , _http_request_method(HTTP_METHOD_GET)
 {
     CreateVarsOnce();

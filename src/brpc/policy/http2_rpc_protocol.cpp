@@ -424,9 +424,19 @@ H2StreamContext* H2Context::FindStream(int stream_id) {
     return NULL;
 }
 
+void SetPossibleGoAwayStreamId (const int stream_id, const SocketId socket_id) {
+    SocketUniquePtr tmp_sock;
+    int rc = Socket::Address(socket_id, &tmp_sock);
+    if (rc != 0) {
+        return;
+    }
+    tmp_sock->possible_h2_max_stream_id = stream_id;
+}
+
 int H2Context::TryToInsertStream(int stream_id, H2StreamContext* ctx) {
     std::unique_lock<butil::Mutex> mu(_stream_mutex);
     if (_goaway_stream_id >= 0 && stream_id > _goaway_stream_id) {
+        SetPossibleGoAwayStreamId(_goaway_stream_id, raw_socket_id);
         return 1;
     }
     H2StreamContext*& sctx = _pending_streams[stream_id];
@@ -1491,6 +1501,21 @@ bvar::PerSecond<bvar::Adder<int64_t> > g_append_request_time_per_second(
     "h2_append_request_second",     &g_append_request_time);
 #endif
 
+int GetPossibleStreamId(const Controller* cntl) {
+    if (cntl == nullptr) {
+        return 0x7FFFFFFF;
+    }
+    SocketUniquePtr tmp_sock;
+    int rc = Socket::Address(cntl->current_call().peer_id, &tmp_sock);
+    if (rc != 0) {
+        return 0x7FFFFFFF;
+    }
+    if (tmp_sock->possible_h2_max_stream_id == 0) {
+        return 0x7FFFFFFF;
+    }
+    return tmp_sock->possible_h2_max_stream_id; 
+}
+
 butil::Status
 H2UnsentRequest::AppendAndDestroySelf(butil::IOBuf* out, Socket* socket) {
 #if defined(BRPC_PROFILE_H2)
@@ -1511,7 +1536,10 @@ H2UnsentRequest::AppendAndDestroySelf(butil::IOBuf* out, Socket* socket) {
             return butil::Status(EINTERNAL, "Fail to init H2Context");
         }
         socket->initialize_parsing_context(&ctx);
-        
+        ctx->possible_goaway_stream_id = GetPossibleStreamId(_cntl);
+        if (_cntl != nullptr) {
+            ctx->raw_socket_id = _cntl->current_call().peer_id;
+        }
         // Append client connection preface
         out->append(H2_CONNECTION_PREFACE_PREFIX,
                     H2_CONNECTION_PREFACE_PREFIX_SIZE);
