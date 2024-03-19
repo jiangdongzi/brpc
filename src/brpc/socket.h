@@ -433,12 +433,6 @@ public:
     // fd. Once set, this flag can only be cleared inside `WaitAndReset'.
     void SetLogOff();
 
-    // Set EGOAWAY flag to this tmp `Socket' will checkfn fail,
-    // ie. IsH2SocketValid will fail;
-    void SetGoAway();
-
-    bool MarkedGoAway();
-
     // Check Whether the socket is available for user requests.
     bool IsAvailable() const;
 
@@ -881,9 +875,6 @@ private:
 
     // Set by SetLogOff
     butil::atomic<bool> _logoff_flag;
-
-    //Set by SetGoAway
-    bool _goaway_flag;
 
     // Status flag used to mark that
     enum AdditionalRefStatus {

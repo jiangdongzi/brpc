@@ -977,7 +977,6 @@ H2ParseResult H2Context::OnGoAway(
     if (is_client_side()) {
         // The socket will not be selected for further requests.
         _socket->SetLogOff();
-        _socket->SetGoAway();
 
         std::vector<H2StreamContext*> goaway_streams;
         RemoveGoAwayStreams(last_stream_id, &goaway_streams);
@@ -1811,7 +1810,7 @@ void PackH2Request(butil::IOBuf*,
 
 static bool IsH2SocketValid(Socket* s) {
     H2Context* c = static_cast<H2Context*>(s->parsing_context());
-    return (c == NULL || !c->RunOutStreams()) && !s->MarkedGoAway();
+    return c == NULL || !c->RunOutStreams();
 }
 
 StreamUserData* H2GlobalStreamCreator::OnCreatingStream(
