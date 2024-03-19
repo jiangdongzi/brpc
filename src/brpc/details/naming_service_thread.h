@@ -50,6 +50,7 @@ struct GetNamingServiceThreadOptions {
     bool succeed_without_server;
     bool log_succeed_without_server;
     bool use_rdma;
+    int h2_max_stream_id;
     ChannelSignature channel_signature;
     std::shared_ptr<SocketSSLContext> ssl_ctx;
 };

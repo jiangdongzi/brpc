@@ -383,6 +383,7 @@ int Channel::Init(const char* ns_url,
     ns_opt.succeed_without_server = _options.succeed_without_server;
     ns_opt.log_succeed_without_server = _options.log_succeed_without_server;
     ns_opt.use_rdma = _options.use_rdma;
+    ns_opt.h2_max_stream_id = _options.h2_max_stream_id;
     ns_opt.channel_signature = ComputeChannelSignature(_options);
     if (CreateSocketSSLContext(_options, &ns_opt.ssl_ctx) != 0) {
         return -1;
