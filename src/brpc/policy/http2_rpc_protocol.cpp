@@ -1520,6 +1520,7 @@ int GetPossibleStreamId(const Controller* cntl, butil::Mutex &_stream_mutex) {
     if (butil::fast_rand_less_than(10) == 1) {
         tmp_sock->possible_h2_max_stream_id += 2;
     }
+    LOG(INFO) << "possible_h2_max_stream_id=" << tmp_sock->possible_h2_max_stream_id << ", remote_side: " << cntl->remote_side();
     return tmp_sock->possible_h2_max_stream_id; 
 }
 
