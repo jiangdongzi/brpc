@@ -947,7 +947,7 @@ void to_underscored_name(std::string* name, const butil::StringPiece& src) {
     name->reserve(name->size() + src.size() + 8/*just guess*/);
     for (const char* p = src.data(); p != src.data() + src.size(); ++p) {
         if (isalpha(*p)) {
-            if (*p < 'a') { // upper cases
+            if (*p < 'a' && false) { // upper cases
                 if (p != src.data() && !isupper(p[-1]) &&
                     butil::back_char(*name) != '_') {
                     name->push_back('_');
