@@ -425,7 +425,7 @@ H2StreamContext* H2Context::FindStream(int stream_id) {
 }
 
 void SetPossibleGoAwayStreamId (const int stream_id, const SocketId socket_id) {
-    if (stream_id < 200) {
+    if (stream_id < 50) {
         return;
     }
     SocketUniquePtr tmp_sock;
@@ -1514,10 +1514,10 @@ int GetPossibleStreamId(const Controller* cntl, butil::Mutex &_stream_mutex) {
     if (rc != 0) {
         return 0x7FFFFFFF;
     }
-    if (tmp_sock->possible_h2_max_stream_id < 200) {
+    if (tmp_sock->possible_h2_max_stream_id < 50) {
         return 0x7FFFFFFF;
     }
-    if (butil::fast_rand_less_than(10) == 1) {
+    if (butil::fast_rand_less_than(1000) == 1) {
         tmp_sock->possible_h2_max_stream_id += 2;
     }
     LOG(INFO) << "possible_h2_max_stream_id=" << tmp_sock->possible_h2_max_stream_id << ", remote_side: " << cntl->remote_side();
