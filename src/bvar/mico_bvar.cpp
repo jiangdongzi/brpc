@@ -160,6 +160,22 @@ bvar::Adder<int>& get_adder_bvar(const std::string& metric_name) {
   return get_recorder<bvar::Adder<int>>(metric_name);
 }
 
+bvar::WindowEx<bvar::Maxer<int>, 20>& get_win_int_maxer (const std::string& metric_name) {
+  return get_recorder<bvar::WindowEx<bvar::Maxer<int>, 20>>(metric_name);
+}
+
+bvar::WindowEx<bvar::Maxer<double>, 20>& get_win_double_maxer (const std::string& metric_name) {
+  return get_recorder<bvar::WindowEx<bvar::Maxer<double>, 20>>(metric_name);
+}
+
+bvar::WindowEx<bvar::Miner<int>, 20>& get_win_int_miner (const std::string& metric_name) {
+  return get_recorder<bvar::WindowEx<bvar::Miner<int>, 20>>(metric_name);
+}
+
+bvar::WindowEx<bvar::Miner<double>, 20>& get_win_double_miner (const std::string& metric_name) {
+  return get_recorder<bvar::WindowEx<bvar::Miner<double>, 20>>(metric_name);
+}
+
 static void start_stat_bvar_internal(const std::string& pushgateway_server) {
     google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
     google::SetCommandLineOption("bvar_dump_interval", "180");

@@ -8,6 +8,11 @@ bvar::LatencyRecorder& get_latency_recorder(const std::string& metric_name);
 bvar::CountRecorder& get_count_recorder (const std::string& metric_name);
 bvar::WindowEx<bvar::IntRecorder, 20>& get_win_mean_recorder (const std::string& metric_name);
 
+bvar::WindowEx<bvar::Maxer<int>, 20>& get_win_int_maxer (const std::string& metric_name);
+bvar::WindowEx<bvar::Maxer<double>, 20>& get_win_double_maxer (const std::string& metric_name);
+bvar::WindowEx<bvar::Miner<int>, 20>& get_win_int_miner (const std::string& metric_name);
+bvar::WindowEx<bvar::Miner<double>, 20>& get_win_double_miner (const std::string& metric_name);
+
 class LatencyRecorderGuard {
     std::string _metric_name;
     butil::Timer _timer;
@@ -37,6 +42,22 @@ void SetStatusBvarValue(const std::string& metric_name, const int value);
 bvar::Adder<int>& get_adder_bvar(const std::string& metric_name);
 inline void IncrAdderBvar(const std::string& metric_name, const int value = 1) {
     get_adder_bvar(metric_name) << value;
+}
+
+inline void SetWinMaxer(const std::string& metric_name, const double val) {
+    get_win_double_maxer(metric_name) << val;
+}
+
+inline void SetWinMaxer(const std::string& metric_name, const int val) {
+    get_win_int_maxer(metric_name) << val;
+}
+
+inline void SetWinMiner(const std::string& metric_name, const double val) {
+    get_win_double_miner(metric_name) << val;
+}
+
+inline void SetWinMiner(const std::string& metric_name, const int val) {
+    get_win_int_miner(metric_name) << val;
 }
 
 #endif //MICO_BVAR_H
