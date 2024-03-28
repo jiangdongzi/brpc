@@ -8,7 +8,7 @@ public:
     bool dump(const std::string& name,
               const butil::StringPiece& description) {
         if (description == "0") {
-          return false;
+          return true;
         }
         auto* new_metric = req.add_metric();
         new_metric->set_key(name);
