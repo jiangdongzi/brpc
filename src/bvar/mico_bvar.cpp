@@ -47,6 +47,7 @@ static void* dump_bvar(void* arg) {
     }
     bvar::DumpOptions opts;
     bvar::MVariable::dump_exposed(&d, &opts);
+    opts.white_wildcards.push_back("rpc_server_*");
     bvar::Variable::dump_exposed(&d, &opts);
     std::vector<brpc_metrics::MetricRequest> reqs;
     reqs.swap(d.reqs);
