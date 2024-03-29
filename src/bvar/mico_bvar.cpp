@@ -11,7 +11,7 @@ public:
           return true;
         }
         if (description.front() == '"') {
-          LOG(ERROR) << "dump bvar failed, description is string, name: " << name << ", description: " << description;
+          //LOG(ERROR) << "dump bvar failed, description is string, name: " << name << ", description: " << description;
           return true;
         }
         auto* new_metric = req.add_metric();
