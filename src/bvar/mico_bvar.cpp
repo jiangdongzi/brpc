@@ -10,7 +10,7 @@ public:
         if (description == "0") {
           return true;
         }
-        if (description.front == '"') {
+        if (description.front() == '"') {
           LOG(ERROR) << "dump bvar failed, description is string, name: " << name << ", description: " << description;
           return true;
         }
