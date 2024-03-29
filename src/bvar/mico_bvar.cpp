@@ -10,6 +10,10 @@ public:
         if (description == "0") {
           return true;
         }
+        if (description.front == '"') {
+          LOG(ERROR) << "dump bvar failed, description is string, name: " << name << ", description: " << description;
+          return true;
+        }
         auto* new_metric = req.add_metric();
         new_metric->set_key(name);
         new_metric->set_value(description.as_string());
@@ -47,7 +51,6 @@ static void* dump_bvar(void* arg) {
     }
     bvar::DumpOptions opts;
     bvar::MVariable::dump_exposed(&d, &opts);
-    opts.white_wildcards = "rpc_server_*";
     bvar::Variable::dump_exposed(&d, &opts);
     std::vector<brpc_metrics::MetricRequest> reqs;
     reqs.swap(d.reqs);
