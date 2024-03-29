@@ -94,9 +94,6 @@ template <typename R>
 struct RecorderMap {
   static thread_local butil::FlatMap<std::string, R*> tls_recorder;
   static butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>* g_multiDimension;
-  static void init() {
-    g_multiDimension->init(512);
-  }
 };
 
 template <typename R>
@@ -107,8 +104,8 @@ butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>* RecorderM
 
 static std::string app_name = brpc_get_app_name();
 static std::string host_name = brpc_get_host_name();
-static thread_local std::list<std::string> svr_identity {app_name, host_name};
-static thread_local std::list<std::string> svr_identity_label_name {"app_name", "host_name"};
+static std::list<std::string> svr_identity {app_name, host_name};
+static std::list<std::string> svr_identity_label_name {"app_name", "host_name"};
 
 template <typename R>
 R& get_recorder(const std::string& metric_name) {
@@ -118,10 +115,6 @@ R& get_recorder(const std::string& metric_name) {
   auto* valptr = RecorderMap<R>::tls_recorder.seek(metric_name);
   if (valptr != nullptr) {
       return *(*valptr);
-  }
-
-  if (svr_identity.empty()) {
-    throw std::runtime_error("you should call start_stat_bvar before");
   }
 
   static std::mutex mtx;
@@ -181,9 +174,6 @@ static void start_stat_bvar_internal(const std::string& pushgateway_server) {
     google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
     google::SetCommandLineOption("bvar_dump_interval", "180");
     std::unique_ptr<std::string> pushgateway_server_ptr(new std::string(pushgateway_server));
-
-    RecorderMap<bvar::LatencyRecorder>::init();
-    RecorderMap<bvar::CountRecorder>::init();
 
     bthread_t bvar_stat_tid;
     bthread_start_background(&bvar_stat_tid, nullptr, dump_bvar, pushgateway_server_ptr.release());
