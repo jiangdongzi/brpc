@@ -7,7 +7,7 @@ class PrometheusDumper : public bvar::Dumper {
 public:
     bool dump(const std::string& name,
               const butil::StringPiece& description) {
-        if (description == "0") {
+        if (description == "0" || description == "0.000") {
           return true;
         }
         if (description.front() == '"') {
