@@ -260,8 +260,8 @@ set(GFLAGS_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/buildtrees/gflags/x64-linux-
 set(GFLAGS_LIBRARY "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libgflags.a")
 
 
-set(PROTOBUF_INCLUDE_DIRS "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
-set(PROTOBUF_LIBRARIES "/data/zhiyuan/mico_codes/miuscxx/thirdparty/lib/libprotobuf.a")
+set(PROTOBUF_INCLUDE_DIRS "/home/dev/zhiyuan/new_mico/mico-party-new/mexternal/include")
+set(PROTOBUF_LIBRARIES "/data/zhiyuan/new_mico/mico-party-new/mexternal/lib/libprotobuf.a")
 set(OPENSSL_CRYPTO_LIBRARY "/data/zhiyuan/github/vcpkg/packages/openssl-unix_x64-linux/lib/libcrypto.a")
 
 
@@ -514,10 +514,12 @@ set(PROTO_FILES idl_options.proto
                 brpc/proto_base.proto)
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/output/include/brpc)
 set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
+message("ivyjxj123" ${PROTOBUF_PROTOC_EXECUTABLE})
 compile_proto(PROTO_HDRS PROTO_SRCS ${PROJECT_BINARY_DIR}
                                     ${PROJECT_BINARY_DIR}/output/include
                                     ${PROJECT_SOURCE_DIR}/src
                                     "${PROTO_FILES}")
+
 add_library(PROTO_LIB OBJECT ${PROTO_SRCS} ${PROTO_HDRS})
 
 set(SOURCES
