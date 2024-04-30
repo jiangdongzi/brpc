@@ -29,6 +29,10 @@ class LatencyRecorderGuard {
 #define SCOPED_LATENCY_RECORDER(metric_name) \
     LatencyRecorderGuard BAIDU_CONCAT(scoped_latecy_recorder_dummy_at_line_, __LINE__)(metric_name)
 
+namespace monitor
+{
+    
+
 inline void SetCountRecorder(const std::string& metric_name, const int64_t count = 1) {
     get_count_recorder(metric_name) << count;
 }
@@ -59,5 +63,7 @@ inline void SetWinMiner(const std::string& metric_name, const double val) {
 inline void SetWinMiner(const std::string& metric_name, const int val) {
     get_win_int_miner(metric_name) << val;
 }
+
+} //monotor
 
 #endif //MICO_BVAR_H
