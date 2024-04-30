@@ -294,5 +294,92 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
     mongo_done->Run();
 }
 
+void ProcessMongoResponse(InputMessageBase* msg_base) {
+    const int64_t start_parse_us = butil::cpuwide_time_us();
+    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+
+    char buf[sizeof(mongo_head_t)];
+    const char *p = (const char *)msg->meta.fetch(buf, sizeof(buf));
+    const mongo_head_t *header = (const mongo_head_t*)p;
+
+    const bthread_id_t cid = { static_cast<uint64_t>(header->response_to) };
+    Controller* cntl = NULL;
+
+    StreamId remote_stream_id = meta.has_stream_settings() ? meta.stream_settings().stream_id(): INVALID_STREAM_ID;
+
+    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    if (rc != 0) {
+        LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
+            << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
+        if (remote_stream_id != INVALID_STREAM_ID) {
+            SendStreamRst(msg->socket(), meta.stream_settings().stream_id());
+        }
+        return;
+    }
+    
+    ControllerPrivateAccessor accessor(cntl);
+    if (remote_stream_id != INVALID_STREAM_ID) {
+        accessor.set_remote_stream_settings(
+                new StreamSettings(meta.stream_settings()));
+    }
+
+    if (!meta.user_fields().empty()) {
+        for (const auto& it : meta.user_fields()) {
+            (*cntl->response_user_fields())[it.first] = it.second;
+        }
+    }
+
+    Span* span = accessor.span();
+    if (span) {
+        span->set_base_real_us(msg->base_real_us());
+        span->set_received_us(msg->received_us());
+        span->set_response_size(msg->meta.size() + msg->payload.size() + 12);
+        span->set_start_parse_us(start_parse_us);
+    }
+    const RpcResponseMeta &response_meta = meta.response();
+    const int saved_error = cntl->ErrorCode();
+    do {
+        if (response_meta.error_code() != 0) {
+            // If error_code is unset, default is 0 = success.
+            cntl->SetFailed(response_meta.error_code(), 
+                                  "%s", response_meta.error_text().c_str());
+            break;
+        } 
+        // Parse response message iff error code from meta is 0
+        butil::IOBuf res_buf;
+        const int res_size = msg->payload.length();
+        butil::IOBuf* res_buf_ptr = &msg->payload;
+        if (meta.has_attachment_size()) {
+            if (meta.attachment_size() > res_size) {
+                cntl->SetFailed(
+                    ERESPONSE,
+                    "attachment_size=%d is larger than response_size=%d",
+                    meta.attachment_size(), res_size);
+                break;
+            }
+            int body_without_attachment_size = res_size - meta.attachment_size();
+            msg->payload.cutn(&res_buf, body_without_attachment_size);
+            res_buf_ptr = &res_buf;
+            cntl->response_attachment().swap(msg->payload);
+        }
+
+        const CompressType res_cmp_type = (CompressType)meta.compress_type();
+        cntl->set_response_compress_type(res_cmp_type);
+        if (cntl->response()) {
+            if (!ParseFromCompressedData(
+                    *res_buf_ptr, cntl->response(), res_cmp_type)) {
+                cntl->SetFailed(
+                    ERESPONSE, "Fail to parse response message, "
+                    "CompressType=%s, response_size=%d", 
+                    CompressTypeToCStr(res_cmp_type), res_size);
+            }
+        } // else silently ignore the response.        
+    } while (0);
+    // Unlocks correlation_id inside. Revert controller's
+    // error code if it version check of `cid' fails
+    msg.reset();  // optional, just release resource ASAP
+    accessor.OnResponse(cid, saved_error);
+}
+
 }  // namespace policy
 } // namespace brpc
