@@ -3,6 +3,12 @@
 #include "bvar/multi_dimension.h"
 #include <brpc/channel.h>
 
+std::string brpc_get_host_name();
+std::string brpc_get_app_name();
+
+static const std::string app_name = brpc_get_app_name();
+static const std::string host_name = brpc_get_host_name();
+static const std::string svr_identity = "|" + app_name + "|" + host_name;
 class PrometheusDumper : public bvar::Dumper {
 public:
     bool dump(const std::string& name,
@@ -16,7 +22,7 @@ public:
         }
         auto* new_metric = req.add_metric();
         new_metric->set_key(name);
-        new_metric->set_value(description.as_string());
+        new_metric->set_value(description.as_string().append(svr_identity));
         if (req.metric_size() >= 100) {
           reqs.emplace_back(std::move(req));
         }
@@ -97,19 +103,41 @@ std::string brpc_get_app_name(){
 template <typename R>
 struct RecorderMap {
   static thread_local butil::FlatMap<std::string, R*> tls_recorder;
-  static butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>* g_multiDimension;
+  static butil::FlatMap<std::string, std::unique_ptr<R>> g_recorder;
 };
 
 template <typename R>
 thread_local butil::FlatMap<std::string, R*> RecorderMap<R>::tls_recorder;
 
 template <typename R>
-butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>* RecorderMap<R>::g_multiDimension = new butil::FlatMap<std::string, std::unique_ptr<bvar::MultiDimension<R>>>();
+butil::FlatMap<std::string, std::unique_ptr<R>> RecorderMap<R>::g_recorder;
 
-static std::string app_name = brpc_get_app_name();
-static std::string host_name = brpc_get_host_name();
-static std::list<std::string> svr_identity {app_name, host_name};
-static std::list<std::string> svr_identity_label_name {"app_name", "host_name"};
+// static std::string app_name = brpc_get_app_name();
+// static std::string host_name = brpc_get_host_name();
+// static std::list<std::string> svr_identity {app_name, host_name};
+// static std::list<std::string> svr_identity_label_name {"app_name", "host_name"};
+
+// template <typename R>
+// R& get_recorder(const std::string& metric_name) {
+//   if (!RecorderMap<R>::tls_recorder.initialized()) {
+//     RecorderMap<R>::tls_recorder.init(512);
+//   }
+//   auto* valptr = RecorderMap<R>::tls_recorder.seek(metric_name);
+//   if (valptr != nullptr) {
+//       return *(*valptr);
+//   }
+
+//   static std::mutex mtx;
+//   std::lock_guard<std::mutex> lock(mtx);
+//   if (!RecorderMap<R>::g_multiDimension->initialized()) {
+//     RecorderMap<R>::g_multiDimension->init(512);
+//   }
+//   if (RecorderMap<R>::g_multiDimension->seek(metric_name) == nullptr) {
+//     (*RecorderMap<R>::g_multiDimension)[metric_name].reset(new bvar::MultiDimension<R>(metric_name, svr_identity_label_name));
+//   }
+//   RecorderMap<R>::tls_recorder[metric_name] = (*RecorderMap<R>::g_multiDimension)[metric_name]->get_stats(svr_identity);
+//   return *RecorderMap<R>::tls_recorder[metric_name];
+// }
 
 template <typename R>
 R& get_recorder(const std::string& metric_name) {
@@ -123,13 +151,13 @@ R& get_recorder(const std::string& metric_name) {
 
   static std::mutex mtx;
   std::lock_guard<std::mutex> lock(mtx);
-  if (!RecorderMap<R>::g_multiDimension->initialized()) {
-    RecorderMap<R>::g_multiDimension->init(512);
+  if (!RecorderMap<R>::g_recorder.initialized()) {
+    RecorderMap<R>::g_recorder.init(512);
   }
-  if (RecorderMap<R>::g_multiDimension->seek(metric_name) == nullptr) {
-    (*RecorderMap<R>::g_multiDimension)[metric_name].reset(new bvar::MultiDimension<R>(metric_name, svr_identity_label_name));
+  if (RecorderMap<R>::g_recorder.seek(metric_name) == nullptr) {
+      RecorderMap<R>::g_recorder[metric_name].reset(new R(metric_name));
   }
-  RecorderMap<R>::tls_recorder[metric_name] = (*RecorderMap<R>::g_multiDimension)[metric_name]->get_stats(svr_identity);
+  RecorderMap<R>::tls_recorder[metric_name] = RecorderMap<R>::g_recorder[metric_name].get();
   return *RecorderMap<R>::tls_recorder[metric_name];
 }
 
@@ -150,7 +178,7 @@ void SetStatusBvarValue(const std::string& metric_name, const int value) {
   get_status_bvar(metric_name).set_value(value);
 }
 
-bvar::WindowEx<bvar::IntRecorder, 20>& get_win_mean_recorder (const std::string& metric_name) {
+bvar::WindowEx<bvar::IntRecorder, 16>& get_win_mean_recorder (const std::string& metric_name) {
   return get_recorder<bvar::WindowEx<bvar::IntRecorder, 20>>(metric_name);
 }
 
@@ -158,25 +186,25 @@ bvar::Adder<int>& get_adder_bvar(const std::string& metric_name) {
   return get_recorder<bvar::Adder<int>>(metric_name);
 }
 
-bvar::WindowEx<bvar::Maxer<int>, 20>& get_win_int_maxer (const std::string& metric_name) {
+bvar::WindowEx<bvar::Maxer<int>, 16>& get_win_int_maxer (const std::string& metric_name) {
   return get_recorder<bvar::WindowEx<bvar::Maxer<int>, 20>>(metric_name);
 }
 
-bvar::WindowEx<bvar::Maxer<double>, 20>& get_win_double_maxer (const std::string& metric_name) {
+bvar::WindowEx<bvar::Maxer<double>, 16>& get_win_double_maxer (const std::string& metric_name) {
   return get_recorder<bvar::WindowEx<bvar::Maxer<double>, 20>>(metric_name);
 }
 
-bvar::WindowEx<bvar::Miner<int>, 20>& get_win_int_miner (const std::string& metric_name) {
+bvar::WindowEx<bvar::Miner<int>, 16>& get_win_int_miner (const std::string& metric_name) {
   return get_recorder<bvar::WindowEx<bvar::Miner<int>, 20>>(metric_name);
 }
 
-bvar::WindowEx<bvar::Miner<double>, 20>& get_win_double_miner (const std::string& metric_name) {
+bvar::WindowEx<bvar::Miner<double>, 16>& get_win_double_miner (const std::string& metric_name) {
   return get_recorder<bvar::WindowEx<bvar::Miner<double>, 20>>(metric_name);
 }
 
 static void start_stat_bvar_internal(const std::string& pushgateway_server) {
-    google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
-    google::SetCommandLineOption("bvar_dump_interval", "180");
+    // google::SetCommandLineOption("bvar_max_dump_multi_dimension_metric_number", "10000");
+    google::SetCommandLineOption("bvar_dump_interval", "16");
     std::unique_ptr<std::string> pushgateway_server_ptr(new std::string(pushgateway_server));
 
     bthread_t bvar_stat_tid;

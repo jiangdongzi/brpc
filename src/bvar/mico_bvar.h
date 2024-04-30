@@ -6,12 +6,12 @@
 void start_stat_bvar(const std::string& pushgateway_server);
 bvar::LatencyRecorder& get_latency_recorder(const std::string& metric_name);
 bvar::CountRecorder& get_count_recorder (const std::string& metric_name);
-bvar::WindowEx<bvar::IntRecorder, 20>& get_win_mean_recorder (const std::string& metric_name);
+bvar::WindowEx<bvar::IntRecorder, 16>& get_win_mean_recorder (const std::string& metric_name);
 
-bvar::WindowEx<bvar::Maxer<int>, 20>& get_win_int_maxer (const std::string& metric_name);
-bvar::WindowEx<bvar::Maxer<double>, 20>& get_win_double_maxer (const std::string& metric_name);
-bvar::WindowEx<bvar::Miner<int>, 20>& get_win_int_miner (const std::string& metric_name);
-bvar::WindowEx<bvar::Miner<double>, 20>& get_win_double_miner (const std::string& metric_name);
+bvar::WindowEx<bvar::Maxer<int>, 16>& get_win_int_maxer (const std::string& metric_name);
+bvar::WindowEx<bvar::Maxer<double>, 16>& get_win_double_maxer (const std::string& metric_name);
+bvar::WindowEx<bvar::Miner<int>, 16>& get_win_int_miner (const std::string& metric_name);
+bvar::WindowEx<bvar::Miner<double>, 16>& get_win_double_miner (const std::string& metric_name);
 
 class LatencyRecorderGuard {
     std::string _metric_name;

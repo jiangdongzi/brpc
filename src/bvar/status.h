@@ -48,6 +48,9 @@ public:
     Status(const butil::StringPiece& name, const T& value) : _value(value) {
         this->expose(name);
     }
+    Status(const butil::StringPiece& name) {
+        this->expose(name);
+    }
     Status(const butil::StringPiece& prefix,
            const butil::StringPiece& name, const T& value) : _value(value) {
         this->expose_as(prefix, name);
@@ -109,6 +112,10 @@ public:
     Status(const T& value) : _value(value), _series_sampler(NULL) { }
     Status(const butil::StringPiece& name, const T& value)
         : _value(value), _series_sampler(NULL) {
+        this->expose(name);
+    }
+    Status(const butil::StringPiece& name)
+        : _series_sampler(NULL) {
         this->expose(name);
     }
     Status(const butil::StringPiece& prefix,
