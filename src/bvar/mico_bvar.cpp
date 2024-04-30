@@ -21,8 +21,8 @@ public:
           return true;
         }
         auto* new_metric = req.add_metric();
-        new_metric->set_key(name);
-        new_metric->set_value(description.as_string().append(svr_identity));
+        new_metric->set_key(name.append(svr_identity));
+        new_metric->set_value(description.as_string());
         if (req.metric_size() >= 100) {
           reqs.emplace_back(std::move(req));
         }
