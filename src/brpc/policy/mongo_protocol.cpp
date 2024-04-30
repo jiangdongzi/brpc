@@ -32,6 +32,9 @@
 #include "brpc/policy/nshead_protocol.h"
 #include "brpc/policy/mongo.pb.h"
 #include "brpc/details/usercode_backup_pool.h"
+#include "bsoncxx/json.hpp"
+#include "bsoncxx/types.hpp"
+#include "bsoncxx/document/view.hpp"
 
 extern "C" {
 void bthread_assign_data(void* data);

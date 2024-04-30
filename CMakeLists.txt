@@ -235,8 +235,8 @@ if(WITH_MESALINK)
     include_directories(${MESALINK_INCLUDE_PATH})
 endif()
 
-# include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
-# include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include/")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include/")
 
 if(WITH_RDMA)
     message("brpc compile with rdma")
