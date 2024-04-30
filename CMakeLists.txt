@@ -98,6 +98,8 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
 )
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include")
 
 execute_process(
     COMMAND bash -c "${PROJECT_SOURCE_DIR}/tools/get_brpc_revision.sh ${PROJECT_SOURCE_DIR} | tr -d '\n'"
@@ -230,6 +232,9 @@ if(WITH_MESALINK)
     endif()
     include_directories(${MESALINK_INCLUDE_PATH})
 endif()
+
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include/")
 
 if(WITH_RDMA)
     message("brpc compile with rdma")
@@ -446,6 +451,7 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/binary_printer.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/recordio.cc
     ${PROJECT_SOURCE_DIR}/src/butil/popen.cpp
+    ${PROJECT_SOURCE_DIR}/src/butil/mongo_utils.cpp
     )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

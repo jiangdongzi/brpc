@@ -15,9 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <cstddef>
+#include <cstdint>
 #include <google/protobuf/descriptor.h>         // MethodDescriptor
 #include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
+#include <mutex>
+#include "brpc/errno.pb.h"
 #include "butil/time.h" 
 #include "butil/iobuf.h"                         // butil::IOBuf
 #include "brpc/controller.h"               // Controller
@@ -32,6 +36,10 @@
 #include "brpc/policy/nshead_protocol.h"
 #include "brpc/policy/mongo.pb.h"
 #include "brpc/details/usercode_backup_pool.h"
+#include "bsoncxx/json.hpp"
+#include "bsoncxx/types.hpp"
+#include "bsoncxx/document/view.hpp"
+#include "brpc/policy/mongo_authenticator.h"
 
 extern "C" {
 void bthread_assign_data(void* data);
@@ -62,59 +70,59 @@ SendMongoResponse::~SendMongoResponse() {
 }
 
 void SendMongoResponse::Run() {
-    std::unique_ptr<SendMongoResponse> delete_self(this);
-    ConcurrencyRemover concurrency_remover(status, &cntl, received_us);
-    Socket* socket = ControllerPrivateAccessor(&cntl).get_sending_socket();
+    // std::unique_ptr<SendMongoResponse> delete_self(this);
+    // ConcurrencyRemover concurrency_remover(status, &cntl, received_us);
+    // Socket* socket = ControllerPrivateAccessor(&cntl).get_sending_socket();
 
-    if (cntl.IsCloseConnection()) {
-        socket->SetFailed();
-        return;
-    }
+    // if (cntl.IsCloseConnection()) {
+    //     socket->SetFailed();
+    //     return;
+    // }
     
-    const MongoServiceAdaptor* adaptor =
-            server->options().mongo_service_adaptor;
-    butil::IOBuf res_buf;
-    if (cntl.Failed()) {
-        adaptor->SerializeError(res.header().response_to(), &res_buf);
-    } else if (res.has_message()) {
-        mongo_head_t header = {
-            res.header().message_length(),
-            res.header().request_id(),
-            res.header().response_to(),
-            res.header().op_code()
-        };
-        res_buf.append(static_cast<const void*>(&header), sizeof(mongo_head_t));
-        int32_t response_flags = res.response_flags();
-        int64_t cursor_id = res.cursor_id();
-        int32_t starting_from = res.starting_from();
-        int32_t number_returned = res.number_returned();
-        res_buf.append(&response_flags, sizeof(response_flags));
-        res_buf.append(&cursor_id, sizeof(cursor_id));
-        res_buf.append(&starting_from, sizeof(starting_from));
-        res_buf.append(&number_returned, sizeof(number_returned));
-        res_buf.append(res.message());
-    }
+    // const MongoServiceAdaptor* adaptor =
+    //         server->options().mongo_service_adaptor;
+    // butil::IOBuf res_buf;
+    // if (cntl.Failed()) {
+    //     adaptor->SerializeError(res.header().response_to(), &res_buf);
+    // } else if (res.has_message()) {
+    //     mongo_head_t header = {
+    //         res.header().message_length(),
+    //         res.header().request_id(),
+    //         res.header().response_to(),
+    //         res.header().op_code()
+    //     };
+    //     res_buf.append(static_cast<const void*>(&header), sizeof(mongo_head_t));
+    //     int32_t response_flags = res.response_flags();
+    //     int64_t cursor_id = res.cursor_id();
+    //     int32_t starting_from = res.starting_from();
+    //     int32_t number_returned = res.number_returned();
+    //     res_buf.append(&response_flags, sizeof(response_flags));
+    //     res_buf.append(&cursor_id, sizeof(cursor_id));
+    //     res_buf.append(&starting_from, sizeof(starting_from));
+    //     res_buf.append(&number_returned, sizeof(number_returned));
+    //     res_buf.append(res.message());
+    // }
 
-    if (!res_buf.empty()) {
-        // Have the risk of unlimited pending responses, in which case, tell
-        // users to set max_concurrency.
-        Socket::WriteOptions wopt;
-        wopt.ignore_eovercrowded = true;
-        if (socket->Write(&res_buf, &wopt) != 0) {
-            PLOG(WARNING) << "Fail to write into " << *socket;
-            return;
-        }
-    }
+    // if (!res_buf.empty()) {
+    //     // Have the risk of unlimited pending responses, in which case, tell
+    //     // users to set max_concurrency.
+    //     Socket::WriteOptions wopt;
+    //     wopt.ignore_eovercrowded = true;
+    //     if (socket->Write(&res_buf, &wopt) != 0) {
+    //         PLOG(WARNING) << "Fail to write into " << *socket;
+    //         return;
+    //     }
+    // }
 }
 
 ParseResult ParseMongoMessage(butil::IOBuf* source,
                               Socket* socket, bool /*read_eof*/, const void *arg) {
-    const Server* server = static_cast<const Server*>(arg);
-    const MongoServiceAdaptor* adaptor = server->options().mongo_service_adaptor;
-    if (NULL == adaptor) {
-        // The server does not enable mongo adaptor.
-        return MakeParseError(PARSE_ERROR_TRY_OTHERS);
-    }
+    // const Server* server = static_cast<const Server*>(arg);
+    // const MongoServiceAdaptor* adaptor = server->options().mongo_service_adaptor;
+    // if (NULL == adaptor) {
+    //     // The server does not enable mongo adaptor.
+    //     return MakeParseError(PARSE_ERROR_TRY_OTHERS);
+    // }
 
     char buf[sizeof(mongo_head_t)];
     const char *p = (const char *)source->fetch(buf, sizeof(buf));
@@ -142,15 +150,15 @@ ParseResult ParseMongoMessage(butil::IOBuf* source,
     // created by the last Query). The context is stored in
     // socket::_input_message, and created at the first time when msg
     // comes over the socket.
-    Destroyable *socket_context_msg = socket->parsing_context();
-    if (NULL == socket_context_msg) {
-        MongoContext *context = adaptor->CreateSocketContext();
-        if (NULL == context) {
-            return MakeParseError(PARSE_ERROR_NO_RESOURCE);
-        }
-        socket_context_msg = new MongoContextMessage(context);
-        socket->reset_parsing_context(socket_context_msg);
-    }
+    // Destroyable *socket_context_msg = socket->parsing_context();
+    // if (NULL == socket_context_msg) {
+    //     MongoContext *context = adaptor->CreateSocketContext();
+    //     if (NULL == context) {
+    //         return MakeParseError(PARSE_ERROR_NO_RESOURCE);
+    //     }
+    //     socket_context_msg = new MongoContextMessage(context);
+    //     socket->reset_parsing_context(socket_context_msg);
+    // }
     policy::MostCommonMessage* msg = policy::MostCommonMessage::Get();
     source->cutn(&msg->meta, sizeof(buf));
     size_t act_body_len = source->cutn(&msg->payload, body_len - sizeof(buf));
@@ -261,7 +269,7 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
         
         mongo_done->cntl.set_log_id(header->request_id);
         const std::string &body_str = msg->payload.to_string();
-        mongo_done->req.set_message(body_str.c_str(), body_str.size());
+        mongo_done->req.set_sections(body_str.c_str(), body_str.size());
         mongo_done->req.mutable_header()->set_message_length(header->message_length);
         mongo_done->req.mutable_header()->set_request_id(header->request_id);
         mongo_done->req.mutable_header()->set_response_to(header->response_to);
@@ -294,5 +302,117 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
     mongo_done->Run();
 }
 
+// static std::atomic_bool flag;
+
+// static void TestMongoGenerator() {
+//     flag.store(true);
+//     flag.store(true);
+//     MongoAuthenticator auth("mongodb://myUser:password123@localhost:7017/myDatabase");
+//     auth.GenerateCredential(nullptr);
+// }
+
+void PackMongoRequest(butil::IOBuf* req_buf,
+                    SocketMessage**,
+                    uint64_t correlation_id,
+                    const google::protobuf::MethodDescriptor* /*method*/,
+                    Controller* cntl,
+                    const butil::IOBuf& request_body,
+                    const Authenticator* auth) {
+
+    if (auth && auth->GenerateCredential(nullptr) != 0) {
+        return cntl->SetFailed(EREQUEST, "Fail to generate credential");
+    }
+    ControllerPrivateAccessor accessor(cntl);
+    accessor.get_sending_socket()->set_correlation_id(correlation_id);
+    req_buf->append(request_body);
+}
+
+void SerializeMongoRequest(butil::IOBuf* buf,
+                          Controller* cntl,
+                          const google::protobuf::Message* pbreq) {
+    const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
+
+    LOG(INFO) << "request: " << req->ShortDebugString();
+
+    switch (req->header().op_code()) {
+        case OP_MSG:
+        {
+            mongo_head_t header = {
+                (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + req->sections().size()),
+                1,
+                0,
+                OP_MSG
+            };
+            LOG(INFO) << "header: " << header;
+            buf->append(&header, sizeof(header));
+            const int flags = req->flag_bits();
+            buf->append(&flags, sizeof(flags));
+            buf->append(req->sections());
+            break;
+        }
+        case OPREPLY:
+        case DB_UPDATE:
+        case DB_INSERT:
+        case DB_DELETE:
+        case DB_KILLCURSORS:
+            LOG(INFO) << "not support op_code: " << req->header().op_code();
+            cntl-> SetFailed(EREQUEST, "not support op_code: %d", req->header().op_code());
+            break;
+        default:
+            cntl->SetFailed(EREQUEST, "Unknown op_code:%d", req->header().op_code());
+            return;
+    }
+
+}
+
+void ProcessMongoResponse(InputMessageBase* msg_base) {
+    // const int64_t start_parse_us = butil::cpuwide_time_us();
+    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+
+    char buf[sizeof(mongo_head_t)];
+    const char *p = (const char *)msg->meta.fetch(buf, sizeof(buf));
+    const mongo_head_t *header = (const mongo_head_t*)p;
+    Socket* socket = msg->socket();
+    const bthread_id_t cid = {socket->correlation_id()};
+    Controller* cntl = NULL;
+
+    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    if (rc != 0) {
+        LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
+            << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
+        return;
+    }
+    
+    ControllerPrivateAccessor accessor(cntl);
+    MongoResponse res;
+    auto& payload = msg->payload;
+    if (header->op_code == OP_MSG) {
+        uint32_t flags;
+        payload.cutn(&flags, 4);
+        res.set_flag_bits(flags);
+        res.set_sections(payload.to_string());
+    } else {
+        LOG(INFO) << "invalid op_code: " << header->op_code;
+        cntl->SetFailed(ERESPONSE, "invalid op_code: %d", header->op_code);
+    }
+    LOG(INFO) << "response: " << res.ShortDebugString();
+    res.Swap((MongoResponse*)cntl->response());
+
+    const int saved_error = cntl->ErrorCode();
+    // Unlocks correlation_id inside. Revert controller's
+    // error code if it version check of `cid' fails
+    msg.reset();  // optional, just release resource ASAP
+    accessor.OnResponse(cid, saved_error);
+}
+
 }  // namespace policy
+
+std::ostream& operator<<(std::ostream& os, const mongo_head_t& head) {
+    os << "message_length: " << head.message_length
+       << ", request_id: " << head.request_id
+       << ", response_to: " << head.response_to
+       << ", op_code: " << head.op_code;
+    return os;
+}
+
 } // namespace brpc

@@ -42,6 +42,7 @@
 #include "brpc/policy/redis_cluster_naming_service.h"
 #include "brpc/policy/redis_sentinel_slave_naming_service.h"
 #include "brpc/policy/redis_sentinel_master_naming_service.h"
+#include "brpc/policy/mongo_naming_service.h"
 
 // Load Balancers
 #include "brpc/policy/round_robin_load_balancer.h"
@@ -52,6 +53,7 @@
 #include "brpc/policy/consistent_hashing_load_balancer.h"
 #include "brpc/policy/hasher.h"
 #include "brpc/policy/dynpart_load_balancer.h"
+#include "brpc/policy/master_slave_load_balancer.h"
 
 
 // Span
@@ -150,6 +152,7 @@ struct GlobalExtensions {
     RedisClusterNamingService rcns;
     RedisSentinelSlaveNamingService rssns;
     RedisSentinelMasterNamingService rsmns;
+    MongoNamingService mns;
 
     RoundRobinLoadBalancer rr_lb;
     WeightedRoundRobinLoadBalancer wrr_lb;
@@ -161,6 +164,7 @@ struct GlobalExtensions {
     ConsistentHashingLoadBalancer ch_ketama_lb;
     ConsistentHashingLoadBalancer ch_redis_cluster_lb;
     DynPartLoadBalancer dynpart_lb;
+    MasterSlaveLoadBalancer ms_lb;
 
     AutoConcurrencyLimiter auto_cl;
     ConstantConcurrencyLimiter constant_cl;
@@ -386,6 +390,7 @@ static void GlobalInitializeOrDieImpl() {
     NamingServiceExtension()->RegisterOrDie("redis_cluster", &g_ext->rcns);
     NamingServiceExtension()->RegisterOrDie("redis_sentinel_slave", &g_ext->rssns);
     NamingServiceExtension()->RegisterOrDie("redis_sentinel_master", &g_ext->rsmns);
+    NamingServiceExtension()->RegisterOrDie("mongodb", &g_ext->mns);
 
     // Load Balancers
     LoadBalancerExtension()->RegisterOrDie("rr", &g_ext->rr_lb);
@@ -398,6 +403,7 @@ static void GlobalInitializeOrDieImpl() {
     LoadBalancerExtension()->RegisterOrDie("c_ketama", &g_ext->ch_ketama_lb);
     LoadBalancerExtension()->RegisterOrDie("c_redis_cluster", &g_ext->ch_redis_cluster_lb);
     LoadBalancerExtension()->RegisterOrDie("_dynpart", &g_ext->dynpart_lb);
+    LoadBalancerExtension()->RegisterOrDie("ms", &g_ext->ms_lb);
 
     // Compress Handlers
     const CompressHandler gzip_compress =
@@ -533,8 +539,8 @@ static void GlobalInitializeOrDieImpl() {
     }
 
     Protocol mongo_protocol = { ParseMongoMessage,
-                                NULL, NULL,
-                                ProcessMongoRequest, NULL,
+                                SerializeMongoRequest, PackMongoRequest,
+                                ProcessMongoRequest, ProcessMongoResponse,
                                 NULL, NULL, NULL,
                                 CONNECTION_TYPE_POOLED, "mongo" };
     if (RegisterProtocol(PROTOCOL_MONGO, mongo_protocol) != 0) {
