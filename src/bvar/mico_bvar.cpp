@@ -179,7 +179,7 @@ void SetStatusBvarValue(const std::string& metric_name, const int value) {
 }
 
 bvar::WindowEx<bvar::IntRecorder, 16>& get_win_mean_recorder (const std::string& metric_name) {
-  return get_recorder<bvar::WindowEx<bvar::IntRecorder, 20>>(metric_name);
+  return get_recorder<bvar::WindowEx<bvar::IntRecorder, 16>>(metric_name);
 }
 
 bvar::Adder<int>& get_adder_bvar(const std::string& metric_name) {
@@ -187,19 +187,19 @@ bvar::Adder<int>& get_adder_bvar(const std::string& metric_name) {
 }
 
 bvar::WindowEx<bvar::Maxer<int>, 16>& get_win_int_maxer (const std::string& metric_name) {
-  return get_recorder<bvar::WindowEx<bvar::Maxer<int>, 20>>(metric_name);
+  return get_recorder<bvar::WindowEx<bvar::Maxer<int>, 16>>(metric_name);
 }
 
 bvar::WindowEx<bvar::Maxer<double>, 16>& get_win_double_maxer (const std::string& metric_name) {
-  return get_recorder<bvar::WindowEx<bvar::Maxer<double>, 20>>(metric_name);
+  return get_recorder<bvar::WindowEx<bvar::Maxer<double>, 16>>(metric_name);
 }
 
 bvar::WindowEx<bvar::Miner<int>, 16>& get_win_int_miner (const std::string& metric_name) {
-  return get_recorder<bvar::WindowEx<bvar::Miner<int>, 20>>(metric_name);
+  return get_recorder<bvar::WindowEx<bvar::Miner<int>, 16>>(metric_name);
 }
 
 bvar::WindowEx<bvar::Miner<double>, 16>& get_win_double_miner (const std::string& metric_name) {
-  return get_recorder<bvar::WindowEx<bvar::Miner<double>, 20>>(metric_name);
+  return get_recorder<bvar::WindowEx<bvar::Miner<double>, 16>>(metric_name);
 }
 
 static void start_stat_bvar_internal(const std::string& pushgateway_server) {
