@@ -56,7 +56,7 @@ static void* dump_bvar(void* arg) {
       return nullptr;
     }
     bvar::DumpOptions opts;
-    bvar::MVariable::dump_exposed(&d, &opts);
+    // bvar::MVariable::dump_exposed(&d, &opts);
     bvar::Variable::dump_exposed(&d, &opts);
     std::vector<brpc_metrics::MetricRequest> reqs;
     reqs.swap(d.reqs);
