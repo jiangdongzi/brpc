@@ -8,7 +8,7 @@ std::string brpc_get_app_name();
 
 static const std::string app_name = brpc_get_app_name();
 static const std::string host_name = brpc_get_host_name();
-static const std::string svr_identity = "|" + app_name + "|" + host_name;
+static const std::string svr_identity = "@" + app_name + "@" + host_name;
 class PrometheusDumper : public bvar::Dumper {
 public:
     bool dump(const std::string& name,
