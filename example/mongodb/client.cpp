@@ -24,6 +24,7 @@
 #include <brpc/channel.h>
 #include <brpc/memcache.h>
 #include <brpc/policy/couchbase_authenticator.h>
+#include "brpc/options.pb.h"
 #include "brpc/policy/mongo.pb.h"
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/types.hpp>
@@ -62,16 +63,10 @@ int main(int argc, char* argv[]) {
     
     // Initialize the channel, NULL means using default options. 
     brpc::ChannelOptions options;
-    options.protocol = brpc::PROTOCOL_MEMCACHE;
+    options.protocol = brpc::PROTOCOL_MONGO;
     options.connection_type = FLAGS_connection_type;
     options.timeout_ms = FLAGS_timeout_ms/*milliseconds*/;
     options.max_retry = FLAGS_max_retry;
-    if (FLAGS_use_couchbase && !FLAGS_bucket_name.empty()) {
-        brpc::policy::CouchbaseAuthenticator* auth =
-            new brpc::policy::CouchbaseAuthenticator(FLAGS_bucket_name,
-                                                     FLAGS_bucket_password);
-        options.auth = auth;
-    }
 
     if (channel.Init(FLAGS_server.c_str(), FLAGS_load_balancer.c_str(), &options) != 0) {
         LOG(ERROR) << "Fail to initialize channel";
