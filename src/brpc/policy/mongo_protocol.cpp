@@ -114,12 +114,12 @@ void SendMongoResponse::Run() {
 
 ParseResult ParseMongoMessage(butil::IOBuf* source,
                               Socket* socket, bool /*read_eof*/, const void *arg) {
-    const Server* server = static_cast<const Server*>(arg);
-    const MongoServiceAdaptor* adaptor = server->options().mongo_service_adaptor;
-    if (NULL == adaptor) {
-        // The server does not enable mongo adaptor.
-        return MakeParseError(PARSE_ERROR_TRY_OTHERS);
-    }
+    // const Server* server = static_cast<const Server*>(arg);
+    // const MongoServiceAdaptor* adaptor = server->options().mongo_service_adaptor;
+    // if (NULL == adaptor) {
+    //     // The server does not enable mongo adaptor.
+    //     return MakeParseError(PARSE_ERROR_TRY_OTHERS);
+    // }
 
     char buf[sizeof(mongo_head_t)];
     const char *p = (const char *)source->fetch(buf, sizeof(buf));
@@ -147,15 +147,15 @@ ParseResult ParseMongoMessage(butil::IOBuf* source,
     // created by the last Query). The context is stored in
     // socket::_input_message, and created at the first time when msg
     // comes over the socket.
-    Destroyable *socket_context_msg = socket->parsing_context();
-    if (NULL == socket_context_msg) {
-        MongoContext *context = adaptor->CreateSocketContext();
-        if (NULL == context) {
-            return MakeParseError(PARSE_ERROR_NO_RESOURCE);
-        }
-        socket_context_msg = new MongoContextMessage(context);
-        socket->reset_parsing_context(socket_context_msg);
-    }
+    // Destroyable *socket_context_msg = socket->parsing_context();
+    // if (NULL == socket_context_msg) {
+    //     MongoContext *context = adaptor->CreateSocketContext();
+    //     if (NULL == context) {
+    //         return MakeParseError(PARSE_ERROR_NO_RESOURCE);
+    //     }
+    //     socket_context_msg = new MongoContextMessage(context);
+    //     socket->reset_parsing_context(socket_context_msg);
+    // }
     policy::MostCommonMessage* msg = policy::MostCommonMessage::Get();
     source->cutn(&msg->meta, sizeof(buf));
     size_t act_body_len = source->cutn(&msg->payload, body_len - sizeof(buf));
