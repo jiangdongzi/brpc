@@ -94,12 +94,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    while (!brpc::IsAskedToQuit()) {
-        sleep(1);
-        LOG(INFO) << "Accessing memcache server at qps=" << g_latency_recorder.qps(1)
-                  << " latency=" << g_latency_recorder.latency(1);
-    }
-
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
         delete options.auth;

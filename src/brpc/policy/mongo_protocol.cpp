@@ -363,6 +363,7 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
     res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
     res.set_message(payload.to_string());
+    LOG(INFO) << "response: " << res.ShortDebugString();
     res.Swap((MongoResponse*)cntl->response());
 
     const int saved_error = cntl->ErrorCode();
