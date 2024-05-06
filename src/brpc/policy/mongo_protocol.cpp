@@ -317,12 +317,15 @@ void SerializeMongoRequest(butil::IOBuf* buf,
                           const google::protobuf::Message* pbreq) {
     const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
     mongo_head_t header = {
-        (int)(sizeof(mongo_head_t) + req->fullcollectionname().size() + 2 * sizeof(int32_t) + req->message().size()),
+        (int)(sizeof(mongo_head_t) + req->fullcollectionname().size() + 3 * sizeof(int32_t) + req->message().size()),
         1,
         0,
         DB_QUERY
     };
+    LOG(INFO) << "header: " << header;
     buf->append(&header, sizeof(header));
+    int flags = req->flags();
+    buf->append(&flags, sizeof(flags));
     buf->append(req->fullcollectionname());
     int number_to_skip = req->numbertoskip();
     int number_to_return = req->numbertoreturn();
@@ -369,6 +372,8 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     accessor.OnResponse(cid, saved_error);
 }
 
+}  // namespace policy
+
 std::ostream& operator<<(std::ostream& os, const mongo_head_t& head) {
     os << "message_length: " << head.message_length
        << ", request_id: " << head.request_id
@@ -377,5 +382,4 @@ std::ostream& operator<<(std::ostream& os, const mongo_head_t& head) {
     return os;
 }
 
-}  // namespace policy
 } // namespace brpc
