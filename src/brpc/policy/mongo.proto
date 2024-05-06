@@ -46,7 +46,10 @@ message MongoHeader {
 
 message MongoRequest {
     required MongoHeader header = 1;
-    required string message = 2;
+    required string fullCollectionName = 2;
+    optional int32 numberToSkip = 3;
+    optional int32 numberToReturn = 4;
+    required string message = 5;
 }
 
 message MongoResponse {

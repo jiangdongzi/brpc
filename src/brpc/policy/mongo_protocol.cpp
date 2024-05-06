@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <cstddef>
 #include <google/protobuf/descriptor.h>         // MethodDescriptor
 #include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
@@ -295,6 +296,38 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
     } while (false);
 
     mongo_done->Run();
+}
+
+void PackRpcRequest(butil::IOBuf* req_buf,
+                    SocketMessage**,
+                    uint64_t correlation_id,
+                    const google::protobuf::MethodDescriptor* /*method*/,
+                    Controller* cntl,
+                    const butil::IOBuf& request_body,
+                    const Authenticator* auth) {
+
+    ControllerPrivateAccessor accessor(cntl);
+    accessor.get_sending_socket()->set_correlation_id(correlation_id);
+    req_buf->append(request_body);
+}
+
+void SerializeMongoRequest(butil::IOBuf* buf,
+                          Controller* cntl,
+                          const google::protobuf::Message* pbreq) {
+    const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
+    mongo_head_t header = {
+        (int)(sizeof(mongo_head_t) + req->fullcollectionname().size() + 2 * sizeof(int32_t) + req->message().size()),
+        1,
+        0,
+        DB_QUERY
+    };
+    buf->append(&header, sizeof(header));
+    buf->append(req->fullcollectionname());
+    int number_to_skip = req->numbertoskip();
+    int number_to_return = req->numbertoreturn();
+    buf->append(&number_to_skip, sizeof(number_to_skip));
+    buf->append(&number_to_return, sizeof(number_to_return));
+    buf->append(req->message());
 }
 
 void ProcessMongoResponse(InputMessageBase* msg_base) {
