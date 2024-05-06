@@ -30,7 +30,19 @@ ParseResult ParseMongoMessage(butil::IOBuf* source, Socket* socket, bool read_eo
 
 // Actions to a (client) request in mongo format
 void ProcessMongoRequest(InputMessageBase* msg);
+void PackMongoRequest(butil::IOBuf* req_buf,
+                    SocketMessage**,
+                    uint64_t correlation_id,
+                    const google::protobuf::MethodDescriptor* /*method*/,
+                    Controller* cntl,
+                    const butil::IOBuf& request_body,
+                    const Authenticator* auth);
 
+void SerializeMongoRequest(butil::IOBuf* buf,
+                          Controller* cntl,
+                          const google::protobuf::Message* pbreq);
+
+void ProcessMongoResponse(InputMessageBase* msg_base);
 } // namespace policy
 } // namespace brpc
 
