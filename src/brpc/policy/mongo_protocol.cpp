@@ -299,7 +299,7 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
     mongo_done->Run();
 }
 
-void PackRpcRequest(butil::IOBuf* req_buf,
+void PackMongoRequest(butil::IOBuf* req_buf,
                     SocketMessage**,
                     uint64_t correlation_id,
                     const google::protobuf::MethodDescriptor* /*method*/,
