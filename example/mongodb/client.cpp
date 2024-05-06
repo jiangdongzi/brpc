@@ -29,6 +29,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/types.hpp>
 #include <bsoncxx/document/view.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
 
 DEFINE_int32(thread_num, 10, "Number of threads to send requests");
 DEFINE_bool(use_bthread, false, "Use bthread to send requests");
@@ -79,17 +80,19 @@ int main(int argc, char* argv[]) {
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
-    char fullCollectionName[] = "myDatabase.test\0"; // Ensure null-terminated string
+    char fullCollectionName[] = "myDatabase.test"; // Ensure null-terminated string
     int32_t flags = 0; // No special options
     int32_t numberToSkip = 0;
     int32_t numberToReturn = 0; // Return all matching documents
-
+    request.set_fullcollectionname(fullCollectionName, sizeof(fullCollectionName));
+    bsoncxx::builder::stream::document document{};
+    auto v = document.view();
+    request.set_message((char*)v.data(), v.length());
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return -1;
     }
-    
 
     while (!brpc::IsAskedToQuit()) {
         sleep(1);

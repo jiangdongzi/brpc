@@ -35,6 +35,7 @@ include(FindProtobuf)
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER echo.proto)
 # include PROTO_HEADER
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+link_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/lib")
 
 # Search for libthrift* by best effort. If it is not found and brpc is
 # compiled with thrift protocol enabled, a link error would be reported.
@@ -139,3 +140,4 @@ endif()
 add_executable(memcache_client client.cpp)
 
 target_link_libraries(memcache_client ${BRPC_LIB} ${DYNAMIC_LIB})
+target_link_libraries(memcache_client bsoncxx)
