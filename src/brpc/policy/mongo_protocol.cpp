@@ -16,6 +16,7 @@
 // under the License.
 
 #include <cstddef>
+#include <cstdint>
 #include <google/protobuf/descriptor.h>         // MethodDescriptor
 #include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
@@ -349,6 +350,16 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     }
     
     ControllerPrivateAccessor accessor(cntl);
+    MongoResponse res;
+    auto& payload = msg->payload;
+    constexpr int body_header_len = sizeof(int32_t) * 3 + sizeof(int64_t);
+    char body_header[body_header_len];
+    payload.cutn(body_header, body_header_len);
+    res.set_response_flags(*(int32_t*)body_header);
+    res.set_cursor_id(*(int64_t*)(body_header + sizeof(int32_t)));
+    res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
+    res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
+    res.set_message(payload.to_string());
 
     const int saved_error = cntl->ErrorCode();
     // Unlocks correlation_id inside. Revert controller's
