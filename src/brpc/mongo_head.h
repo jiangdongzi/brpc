@@ -70,6 +70,7 @@ struct mongo_head_t {
         }
     }
 };
+std::ostream& operator<<(std::ostream& os, const mongo_head_t& head);
 #pragma pack()
 
 } // namespace brpc

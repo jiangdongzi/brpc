@@ -369,5 +369,13 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     accessor.OnResponse(cid, saved_error);
 }
 
+std::ostream& operator<<(std::ostream& os, const mongo_head_t& head) {
+    os << "message_length: " << head.message_length
+       << ", request_id: " << head.request_id
+       << ", response_to: " << head.response_to
+       << ", op_code: " << head.op_code;
+    return os;
+}
+
 }  // namespace policy
 } // namespace brpc
