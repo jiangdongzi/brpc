@@ -490,7 +490,6 @@ int VerifyServerSign() {
     }
 
 
-
     return 0;
 }
 
@@ -555,6 +554,7 @@ int main(int argc, char* argv[]) {
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
     GenerateCredential(NULL);
     GenerateCredential1(NULL);
+    VerifyServerSign();
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
