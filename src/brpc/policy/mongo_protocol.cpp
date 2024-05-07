@@ -316,26 +316,63 @@ void SerializeMongoRequest(butil::IOBuf* buf,
                           Controller* cntl,
                           const google::protobuf::Message* pbreq) {
     const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
-    mongo_head_t header = {
-        (int)(sizeof(mongo_head_t) + req->fullcollectionname().size() + 3 * sizeof(int32_t) + req->message().size()),
-        1,
-        0,
-        DB_QUERY
-    };
-    LOG(INFO) << "header: " << header;
-    buf->append(&header, sizeof(header));
-    int flags = req->flags();
-    buf->append(&flags, sizeof(flags));
-    buf->append(req->fullcollectionname());
-    int number_to_skip = req->numbertoskip();
-    int number_to_return = req->numbertoreturn();
-    buf->append(&number_to_skip, sizeof(number_to_skip));
-    buf->append(&number_to_return, sizeof(number_to_return));
-    buf->append(req->message());
+
+    switch (req->header().op_code()) {
+        case DB_QUERY:
+        {
+            mongo_head_t header = {
+                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 3 * sizeof(int32_t) + req->message().size()),
+                1,
+                0,
+                DB_QUERY
+            };
+            LOG(INFO) << "header: " << header;
+            buf->append(&header, sizeof(header));
+            int flags = req->flags();
+            buf->append(&flags, sizeof(flags));
+            buf->append(req->full_collection_name());
+            int number_to_skip = req->number_to_skip();
+            int number_to_return = req->number_to_return();
+            buf->append(&number_to_skip, sizeof(number_to_skip));
+            buf->append(&number_to_return, sizeof(number_to_return));
+            buf->append(req->message());
+
+        }
+        case DB_GETMORE:
+        {
+            mongo_head_t header = {
+                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 2 * sizeof(int32_t) + req->message().size()),
+                1,
+                0,
+                DB_GETMORE
+            };
+            LOG(INFO) << "header: " << header;
+            buf->append(&header, sizeof(header));
+            const int zero = 0;
+            buf->append(&zero, sizeof(zero));
+            buf->append(req->full_collection_name());
+            const int number_to_return = req->number_to_return();
+            buf->append(&number_to_return, sizeof(number_to_return));
+            const int64_t cursor_id = req->cursor_id();
+            buf->append(&cursor_id, sizeof(cursor_id));
+        }
+        case OPREPLY:
+        case DB_UPDATE:
+        case DB_INSERT:
+        case DB_DELETE:
+        case DB_KILLCURSORS:
+            LOG(INFO) << "not support op_code: " << req->header().op_code();
+            cntl-> SetFailed(EREQUEST, "not support op_code: %d", req->header().op_code());
+            break;
+        default:
+            cntl->SetFailed(EREQUEST, "Unknown op_code:%d", req->header().op_code());
+            return;
+    }
+
 }
 
 void ProcessMongoResponse(InputMessageBase* msg_base) {
-    const int64_t start_parse_us = butil::cpuwide_time_us();
+    // const int64_t start_parse_us = butil::cpuwide_time_us();
     DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
 
     char buf[sizeof(mongo_head_t)];
