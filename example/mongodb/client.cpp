@@ -98,6 +98,7 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
             // 如果找到了 payload 字段，将其转换为字符串
             bsoncxx::types::b_binary payload = it->get_binary();
             std::string payload_str(reinterpret_cast<const char*>(payload.bytes), payload.size);
+            // payload_str = "r=AAECAwQFBgcICQoLDA0ODxAREhMUFRYACZ7oQAAtIoUGM8GV9GMDsZwtn0ugK6Ai,s=lQDVTrb70GO5Fc2J8CfK9w==,i=10000";
             std::cout << "payload: " << payload_str << std::endl;
             if (i == 0) {
                 sscanf(payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
@@ -319,7 +320,7 @@ int GenerateCredential1(std::string* auth_str) {
     uint8_t client_signature[32];
 //    unsigned char client_proof[32];
     std::string client_proof;
-    client_proof.resize(32);
+    client_proof.resize(20);
     uint8_t client_key[32];
     int rr = 0;
 
@@ -334,6 +335,12 @@ int GenerateCredential1(std::string* auth_str) {
                           client_key, &key_len);
 
     /* StoredKey := H(client_key) */
+    //数字打印client_key
+    for (int i = 0; i < 20; i++) {
+        printf("%d ", client_key[i]);
+    }
+    printf("\n=====cli key========\n");
+
     crypto_openssl_sha1 (client_key, (size_t) 20, stored_key);
 
     //按数字打印stored_key
@@ -361,7 +368,16 @@ int GenerateCredential1(std::string* auth_str) {
 
     for (i = 0; i < 20; i++) {
         client_proof[i] = client_key[i] ^ client_signature[i];
+        //打印以上三个值 proof, client_key, client_signature
+        LOG(INFO) << "i: " << i << " client_proof[i]: " << (int)client_proof[i] << " client_key[i]: " << (int)client_key[i] << " client_signature[i]: " << (int)client_signature[i];
     }
+
+    //按数字打印client_proof
+    for (int i = 0; i < 20; i++) {
+        printf("%d ", client_proof[i]);
+    }
+    printf("\n====ivyjxj===\n");
+
     LOG(INFO) << "ivyjxj client_proof: " << client_proof;
     // rr = base64_encode ((const char*)client_proof, (char *) outbuf + outbuflen, 20);
     std::string proof_base64;
