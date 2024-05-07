@@ -380,7 +380,7 @@ int GenerateCredential1(std::string* auth_str) {
 
     // char fullCollectionName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    int32_t fullCollectionNameLen = strlen(fullCollectionName) + 1;
+    int32_t fullCollectionNameLen = strlen(fullCollectionName);
     int32_t flags = 0; // No special options
     int32_t numberToSkip = 0;
     int32_t numberToReturn = 1; // Return all matching documents

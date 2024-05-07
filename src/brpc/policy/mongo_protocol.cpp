@@ -345,7 +345,7 @@ void SerializeMongoRequest(butil::IOBuf* buf,
         case DB_GETMORE:
         {
             mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 2 * sizeof(int32_t) + sizeof(int64_t)),
+                (int)(sizeof(mongo_head_t) + full_collection_name.size() + 2 * sizeof(int32_t) + sizeof(int64_t)),
                 1,
                 0,
                 DB_GETMORE
@@ -355,7 +355,6 @@ void SerializeMongoRequest(butil::IOBuf* buf,
             const int zero = 0;
             buf->append(&zero, sizeof(zero));
             buf->append(full_collection_name);
-            buf->append("\0");
             const int number_to_return = req->number_to_return();
             buf->append(&number_to_return, sizeof(number_to_return));
             const int64_t cursor_id = req->cursor_id();
