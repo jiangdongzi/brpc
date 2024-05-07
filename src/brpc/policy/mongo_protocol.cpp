@@ -317,6 +317,8 @@ void SerializeMongoRequest(butil::IOBuf* buf,
                           const google::protobuf::Message* pbreq) {
     const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
 
+    LOG(INFO) << "request: " << req->ShortDebugString();
+
     switch (req->header().op_code()) {
         case DB_QUERY:
         {
@@ -336,12 +338,12 @@ void SerializeMongoRequest(butil::IOBuf* buf,
             buf->append(&number_to_skip, sizeof(number_to_skip));
             buf->append(&number_to_return, sizeof(number_to_return));
             buf->append(req->message());
-
+            break;
         }
         case DB_GETMORE:
         {
             mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 2 * sizeof(int32_t) + req->message().size()),
+                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 2 * sizeof(int32_t) + sizeof(int64_t)),
                 1,
                 0,
                 DB_GETMORE
@@ -355,6 +357,7 @@ void SerializeMongoRequest(butil::IOBuf* buf,
             buf->append(&number_to_return, sizeof(number_to_return));
             const int64_t cursor_id = req->cursor_id();
             buf->append(&cursor_id, sizeof(cursor_id));
+            break;
         }
         case OPREPLY:
         case DB_UPDATE:

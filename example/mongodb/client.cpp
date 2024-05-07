@@ -100,11 +100,13 @@ int main(int argc, char* argv[]) {
     char fullCollectionName[] = "myDatabase.test"; // Ensure null-terminated string
     int32_t flags = 0; // No special options
     int32_t numberToSkip = 0;
-    int32_t numberToReturn = 0; // Return all matching documents
-    request.set_fullcollectionname(fullCollectionName, sizeof(fullCollectionName));
+    int32_t numberToReturn = 11; // Return all matching documents
+    request.set_full_collection_name(fullCollectionName, sizeof(fullCollectionName));
+    request.set_number_to_return(numberToReturn);
     bsoncxx::builder::stream::document document{};
     auto v = document.view();
     request.set_message((char*)v.data(), v.length());
+    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
@@ -112,6 +114,20 @@ int main(int argc, char* argv[]) {
     }
 
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+    request.set_cursor_id(response.cursor_id());
+    request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
+    request.set_number_to_return(7);
+
+    cntl.Reset();
+    response.Clear();
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+
+    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
