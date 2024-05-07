@@ -17,6 +17,7 @@
 
 // A multi-threaded client getting keys from a memcache server constantly.
 
+#include <cstddef>
 #include <gflags/gflags.h>
 #include <bthread/bthread.h>
 #include <butil/logging.h>
@@ -29,6 +30,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/types.hpp>
 #include <bsoncxx/document/view.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 
 DEFINE_int32(thread_num, 10, "Number of threads to send requests");
@@ -66,6 +68,83 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
         // 移动偏移量到下一个文档的起始位置
         offset += doc_length;
     }
+}
+
+static // 生成客户端随机数的函数
+void generate_client_nonce(char *nonce, size_t size) {
+    const char *chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    for (size_t i = 0; i < size; i++) {
+        int index = rand() % (strlen(chars));
+        nonce[i] = chars[index];
+    }
+    nonce[size] = '\0';  // 字符串结束符
+}
+
+int GenerateCredential(std::string* auth_str) {
+    // butil::IOBuf buf;
+    // if (!passwd_.empty()) {
+    //     brpc::RedisCommandFormat(&buf, "AUTH %s", passwd_.c_str());
+    // }
+    // if (db_ >= 0) {
+    //     brpc::RedisCommandFormat(&buf, "SELECT %d", db_);
+    // }
+    // *auth_str = buf.to_string();
+    char client_nonce[24];
+    generate_client_nonce(client_nonce, 23);  // 生成一个长度为 23 的随机数
+    char first_message[128];
+    snprintf(first_message, sizeof(first_message), "n,,n=myUser,r=%s", client_nonce);
+
+    bsoncxx::builder::basic::document command;
+    command.append(bsoncxx::builder::basic::kvp("saslStart", 1));
+    command.append(bsoncxx::builder::basic::kvp("mechanism", "SCRAM-SHA-1"));
+    command.append(bsoncxx::builder::basic::kvp("payload", bsoncxx::types::b_binary{
+        bsoncxx::binary_sub_type::k_binary,
+        (uint32_t)strlen(first_message),
+        reinterpret_cast<const uint8_t*>(first_message)
+    }));
+    command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
+
+    // 将 BSON 文档转换为 bson_t*
+    bsoncxx::document::view_or_value view = command.view();
+    // char fullnName[256];
+    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
+    char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
+
+    brpc::policy::MongoRequest request;
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+        brpc::Channel channel;
+    
+    // Initialize the channel, NULL means using default options. 
+    brpc::ChannelOptions options;
+    options.protocol = brpc::PROTOCOL_MONGO;
+
+    if (channel.Init("0.0.0.0:7017", "", &options) != 0) {
+        LOG(ERROR) << "Fail to initialize channel";
+        return -1;
+    }
+
+    // char fullCollectionName[256];
+    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
+    int32_t fullCollectionNameLen = strlen(fullCollectionName) + 1;
+    int32_t flags = 0; // No special options
+    int32_t numberToSkip = 0;
+    int32_t numberToReturn = 1; // Return all matching documents
+    request.set_full_collection_name(fullCollectionName, fullCollectionNameLen);
+    request.set_number_to_return(numberToReturn);
+    // bsoncxx::builder::stream::document document{};
+    auto v = command.view();
+    request.set_message((char*)v.data(), v.length());
+    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+
+    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+
+    return 0;
 }
 
 int main(int argc, char* argv[]) {
@@ -127,7 +206,7 @@ int main(int argc, char* argv[]) {
     }
 
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
-
+    GenerateCredential(NULL);
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {

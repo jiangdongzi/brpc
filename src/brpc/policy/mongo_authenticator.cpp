@@ -85,14 +85,16 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
         return -1;
     }
 
-    char fullCollectionName[] = "myDatabase.test"; // Ensure null-terminated string
+    char fullCollectionName[256];
+    snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
+    int32_t fullCollectionNameLen = strlen(fullCollectionName) + 1;
     int32_t flags = 0; // No special options
     int32_t numberToSkip = 0;
     int32_t numberToReturn = 11; // Return all matching documents
-    request.set_full_collection_name(fullCollectionName, sizeof(fullCollectionName));
+    request.set_full_collection_name(fullCollectionName, fullCollectionNameLen);
     request.set_number_to_return(numberToReturn);
-    bsoncxx::builder::stream::document document{};
-    auto v = document.view();
+    // bsoncxx::builder::stream::document document{};
+    auto v = command.view();
     request.set_message((char*)v.data(), v.length());
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
