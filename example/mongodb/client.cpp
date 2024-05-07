@@ -71,12 +71,19 @@ int encoded_nonce_len;
 char first_payload[4096] = {0};
 uint32_t first_payload_len = 0;
 int conv_id;
+uint8_t salted_password[32];
+char authmsg[1024] = {0};
+uint32_t auth_messagelen = 0;
+uint32_t auth_max = 1024;
+char output_v[4096] = {0};
+int step = 0;
 
 #define MONGOC_SCRAM_SERVER_KEY "Server Key"
 #define MONGOC_SCRAM_CLIENT_KEY "Client Key"
 
 void parse_continuous_bson_data(const uint8_t* data, size_t length) {
     size_t offset = 0;
+    step++;
     while (offset < length) {
         // 假设文档长度存储在前四个字节
         uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data + offset);
@@ -95,6 +102,11 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
                 memcpy(first_payload, payload_str.c_str(), payload_str.size());
                 first_payload_len = payload_str.size();
                 conv_id = view["conversationId"].get_int32();
+            }
+            if (output_v[0] == 0 && step > 3) {
+                memcpy(output_v, payload_str.c_str() + 2, payload_str.size() - 2);
+                //打印output_v
+                printf("output_v = %s\n", output_v);
             }
         }
 
@@ -255,9 +267,6 @@ int GenerateCredential1(std::string* auth_str) {
     scram_buf_write (encoded_nonce, strlen(encoded_nonce), outbuf, outbufmax, &outbuflen);
 
     printf("outbuf = %s\n", outbuf);
-    char authmsg[1024] = {0};
-    uint32_t auth_messagelen = 0;
-    uint32_t auth_max = 1024;
     scram_buf_write (
           (char *) outbuf + 3, outbuflen - 3, (uint8_t*)authmsg, auth_max, &auth_messagelen);
     scram_buf_write (",", -1, (uint8_t*)authmsg, auth_max, &auth_messagelen);
@@ -275,7 +284,6 @@ int GenerateCredential1(std::string* auth_str) {
     char decoded_salt[1024];
     int decoded_salt_len = base64_decode(s, decoded_salt, sizeof(decoded_salt));
     // print_hex((const char *) decoded_salt);
-    uint8_t salted_password[32];
     scram_salt_password (salted_password, hashed_password, strlen(hashed_password), (uint8_t *) decoded_salt, decoded_salt_len, i);
 
     //generate proof
@@ -446,6 +454,42 @@ int GenerateCredential(std::string* auth_str) {
     }
 
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+
+    return 0;
+}
+
+int VerifyServerSign() {
+
+    char encoded_server_signature[64];
+    int32_t encoded_server_signature_len;
+    uint8_t server_signature[32];
+    uint8_t server_key[32];
+    const size_t key_len = strlen (MONGOC_SCRAM_SERVER_KEY);
+    uint32_t out_len;
+    HMAC (EVP_sha1 (),
+                          salted_password,
+                          20,
+                          (uint8_t *) MONGOC_SCRAM_SERVER_KEY,
+                          (int) key_len,
+                          server_key, &out_len);
+    //authmsg hmac
+    HMAC (EVP_sha1 (),
+                        (const unsigned char*)server_key,
+                        20,
+                        (const unsigned char*)authmsg,
+                        auth_messagelen,
+                        server_signature, &out_len);
+    //base64 endcode server_signature
+    encoded_server_signature_len = base64_encode ((const char*)server_signature, encoded_server_signature, 20);
+    printf ("encoded_server_signature = %s\n", encoded_server_signature);
+    //compare encoded_server_signature and output_v, need care length
+    if (strncmp (encoded_server_signature, output_v, encoded_server_signature_len) != 0) {
+        printf ("server signature is not equal\n");
+    } else {
+        printf ("server signature is equal\n");
+    }
+
+
 
     return 0;
 }
