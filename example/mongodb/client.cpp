@@ -73,8 +73,9 @@ char first_payload[4096] = {0};
 uint32_t first_payload_len = 0;
 int conv_id;
 uint8_t salted_password[32];
-char authmsg[1024] = {0};
-uint32_t auth_messagelen = 0;
+// char authmsg[1024] = {0};
+// uint32_t auth_messagelen = 0;
+std::string authmsg;
 uint32_t auth_max = 1024;
 char output_v[4096] = {0};
 int step = 0;
@@ -257,42 +258,62 @@ int GenerateCredential1(std::string* auth_str) {
     char *hashed_password = NULL;
     hashed_password = hexOutput;
     printf("MD5 digest: %s\n", hexOutput);
-    uint8_t outbuf[4096] = {0};
+    // uint8_t outbuf[4096] = {0};
+    std::string out_str;
     int outbufmax = 4096;
     uint32_t outbuflen = 0;
     const char* user_name = "myUser";
-    scram_buf_write ("n,,n=", -1, outbuf, outbufmax, &outbuflen);
-    scram_buf_write (user_name, strlen(user_name), outbuf, outbufmax, &outbuflen);
-    scram_buf_write (",r=", -1, outbuf, outbufmax, &outbuflen);
-    scram_buf_write (encoded_nonce, strlen(encoded_nonce), outbuf, outbufmax, &outbuflen);
+    // scram_buf_write ("n,,n=", -1, outbuf, outbufmax, &outbuflen);
+    out_str = "n,,n=";
+    // scram_buf_write (user_name, strlen(user_name), outbuf, outbufmax, &outbuflen);
+    out_str += user_name;
+    // scram_buf_write (",r=", -1, outbuf, outbufmax, &outbuflen);
+    out_str += ",r=";
+    // scram_buf_write (encoded_nonce, strlen(encoded_nonce), outbuf, outbufmax, &outbuflen);
+    out_str += encoded_nonce;
+    LOG(INFO) << "out_str: " << out_str;
 
-    printf("outbuf = %s\n", outbuf);
-    scram_buf_write (
-          (char *) outbuf + 3, outbuflen - 3, (uint8_t*)authmsg, auth_max, &auth_messagelen);
-    scram_buf_write (",", -1, (uint8_t*)authmsg, auth_max, &auth_messagelen);
-    printf("authmsg = %s\n", authmsg);
-    scram_buf_write (first_payload, first_payload_len, (uint8_t*)authmsg, auth_max, &auth_messagelen);
-    scram_buf_write (",", -1, (uint8_t*)authmsg, auth_max, &auth_messagelen);
-    outbuflen = 0;
-    memset(outbuf, 0, outbufmax);
-    scram_buf_write ("c=biws,r=", -1, outbuf, outbufmax, &outbuflen);
-    scram_buf_write ((char *) r, strlen(r), outbuf, outbufmax, &outbuflen);
-    printf("second outbuf = %s\n", outbuf);
-    scram_buf_write ((const char*)outbuf, outbuflen, (uint8_t*)authmsg, auth_max, &auth_messagelen);
-    printf("second authmsg = %s    len is: %d\n", authmsg, auth_messagelen);
-    scram_buf_write (",p=", -1, outbuf, outbufmax, &outbuflen);
-    char decoded_salt[1024];
-    int decoded_salt_len = base64_decode(s, decoded_salt, sizeof(decoded_salt));
+    // scram_buf_write (
+    //       (char *) outbuf + 3, outbuflen - 3, (uint8_t*)authmsg, auth_max, &auth_messagelen);
+    authmsg.append(out_str.substr(3, out_str.size() - 3));
+    // scram_buf_write (",", -1, (uint8_t*)authmsg, auth_max, &auth_messagelen);
+    authmsg.append(",");
+    // printf("authmsg = %s\n", authmsg);
+    LOG(INFO) << "authmsg: " << authmsg;
+    // scram_buf_write (first_payload, first_payload_len, (uint8_t*)authmsg, auth_max, &auth_messagelen);
+    authmsg.append(first_payload);
+    // scram_buf_write (",", -1, (uint8_t*)authmsg, auth_max, &auth_messagelen);
+    authmsg.append(",");
+    // outbuflen = 0;
+    // memset(outbuf, 0, outbufmax);
+    out_str.clear();
+    // scram_buf_write ("c=biws,r=", -1, outbuf, outbufmax, &outbuflen);
+    out_str = "c=biws,r=";
+    // scram_buf_write ((char *) r, strlen(r), outbuf, outbufmax, &outbuflen);
+    out_str += r;
+    // printf("second outbuf = %s\n", outbuf);
+    LOG(INFO) << "second out_str: " << out_str;
+    // scram_buf_write ((const char*)outbuf, outbuflen, (uint8_t*)authmsg, auth_max, &auth_messagelen);
+    authmsg.append(out_str);
+    // printf("second authmsg = %s    len is: %d\n", authmsg, auth_messagelen);
+    LOG(INFO) << "second authmsg: " << authmsg;
+    // scram_buf_write (",p=", -1, outbuf, outbufmax, &outbuflen);
+    out_str += ",p=";
+    // char decoded_salt[1024];
+    // int decoded_salt_len = base64_decode(s, decoded_salt, sizeof(decoded_salt));
+    std::string decoded_salt;
+    butil::Base64Encode(s, &decoded_salt);
     // print_hex((const char *) decoded_salt);
-    scram_salt_password (salted_password, hashed_password, strlen(hashed_password), (uint8_t *) decoded_salt, decoded_salt_len, i);
+    scram_salt_password (salted_password, hashed_password, strlen(hashed_password), (uint8_t *) decoded_salt.c_str(), decoded_salt.size(), i);
 
     //generate proof
-   uint8_t stored_key[32];
-   uint8_t client_signature[32];
-   unsigned char client_proof[32];
-   uint8_t client_key[32];
-
-   int rr = 0;
+    uint8_t stored_key[32];
+    uint8_t client_signature[32];
+//    unsigned char client_proof[32];
+    std::string client_proof;
+    client_proof.resize(32);
+    uint8_t client_key[32];
+    int rr = 0;
 
       /* ClientKey := HMAC(saltedPassword, "Client Key") */
       //    HMAC (EVP_sha1 (), password, password_len, salt, salt_len, output, NULL);
@@ -311,8 +332,8 @@ int GenerateCredential1(std::string* auth_str) {
     HMAC (EVP_sha1 (),
                         stored_key,
                         20,
-                        (uint8_t*)authmsg,
-                        auth_messagelen,
+                        (uint8_t*)authmsg.c_str(),
+                        authmsg.size(),
                         client_signature, &key_len);
 
     /* ClientProof := ClientKey XOR ClientSignature */
@@ -320,23 +341,24 @@ int GenerateCredential1(std::string* auth_str) {
     for (i = 0; i < 20; i++) {
         client_proof[i] = client_key[i] ^ client_signature[i];
     }
-    rr = base64_encode ((const char*)client_proof, (char *) outbuf + outbuflen, 20);
-    if (-1 == rr) {
-        return false;
-    }
+    // rr = base64_encode ((const char*)client_proof, (char *) outbuf + outbuflen, 20);
+    std::string proof_base64;
+    butil::Base64Encode(client_proof, &proof_base64);
+    // if (-1 == rr) {
+    //     return false;
+    // }
 
-    outbuflen += rr;
+    // outbuflen += rr;
+    out_str += proof_base64;
 
-    printf("outbuf = %s\n", outbuf);
-    printf("outbuf len is: %d\n", outbuflen);
-    printf ("rr = %d\n", rr);
+    LOG(INFO) << "out_str: " << out_str;
 
         bsoncxx::builder::stream::document builder{};
 
         // Append the command fields
         builder << "saslContinue" << 1
                 << "conversationId" << conv_id
-                << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, outbuflen, outbuf};
+                << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, outbuflen, (const unsigned char*)out_str.c_str()};
         auto v = builder.view();
     // char fullnName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
@@ -536,8 +558,8 @@ int VerifyServerSign() {
     HMAC (EVP_sha1 (),
                         (const unsigned char*)server_key,
                         20,
-                        (const unsigned char*)authmsg,
-                        auth_messagelen,
+                        (const unsigned char*)authmsg.c_str(),
+                        authmsg.size(),
                         server_signature, &out_len);
     //base64 endcode server_signature
     encoded_server_signature_len = base64_encode ((const char*)server_signature, encoded_server_signature, 20);
@@ -582,11 +604,10 @@ int main(int argc, char* argv[]) {
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
-    char fullCollectionName[] = "myDatabase.test"; // Ensure null-terminated string
     int32_t flags = 0; // No special options
     int32_t numberToSkip = 0;
     int32_t numberToReturn = 11; // Return all matching documents
-    request.set_full_collection_name(fullCollectionName, sizeof(fullCollectionName));
+    request.set_full_collection_name("myDatabase.test");
     request.set_number_to_return(numberToReturn);
     bsoncxx::builder::stream::document document{};
     auto v = document.view();
