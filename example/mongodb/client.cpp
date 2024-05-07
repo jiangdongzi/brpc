@@ -458,6 +458,64 @@ int GenerateCredential(std::string* auth_str) {
     return 0;
 }
 
+int LastAuthStep() {
+
+    using namespace bsoncxx::builder::basic;
+
+    // 创建一个BSON文档构建器
+    document builder{};
+
+    // 添加saslContinue和conversationId字段
+    builder.append(kvp("saslContinue", 1));
+    builder.append(kvp("conversationId", conv_id));
+
+    // 添加一个空的payload字段
+    // 注意：根据你的需要，如果payload应该是空的二进制数据，你可以如下设置：
+    builder.append(kvp("payload", bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, 0, nullptr}));
+    auto v = builder.view();
+
+
+    // 将 BSON 文档转换为 bson_t*
+    // char fullnName[256];
+    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
+    char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
+
+    brpc::policy::MongoRequest request;
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+        brpc::Channel channel;
+    
+    // Initialize the channel, NULL means using default options. 
+    brpc::ChannelOptions options;
+    options.protocol = brpc::PROTOCOL_MONGO;
+
+    if (channel.Init("0.0.0.0:7017", "", &options) != 0) {
+        LOG(ERROR) << "Fail to initialize channel";
+        return -1;
+    }
+
+    // char fullCollectionName[256];
+    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
+    int32_t fullCollectionNameLen = strlen(fullCollectionName) + 1;
+    int32_t flags = 0; // No special options
+    int32_t numberToSkip = 0;
+    int32_t numberToReturn = 1; // Return all matching documents
+    request.set_full_collection_name(fullCollectionName, fullCollectionNameLen);
+    request.set_number_to_return(numberToReturn);
+    // bsoncxx::builder::stream::document document{};
+    request.set_message((char*)v.data(), v.length());
+    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+
+    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+
+    return 0;
+}
+
 int VerifyServerSign() {
 
     char encoded_server_signature[64];
@@ -555,6 +613,7 @@ int main(int argc, char* argv[]) {
     GenerateCredential(NULL);
     GenerateCredential1(NULL);
     VerifyServerSign();
+    LastAuthStep();
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
