@@ -318,12 +318,14 @@ void SerializeMongoRequest(butil::IOBuf* buf,
     const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
 
     LOG(INFO) << "request: " << req->ShortDebugString();
+    std::string full_collection_name = req->full_collection_name();
+    full_collection_name += '\0';
 
     switch (req->header().op_code()) {
         case DB_QUERY:
         {
             mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 1 + 3 * sizeof(int32_t) + req->message().size()),
+                (int)(sizeof(mongo_head_t) + full_collection_name.size() + 3 * sizeof(int32_t) + req->message().size()),
                 1,
                 0,
                 DB_QUERY
@@ -332,8 +334,7 @@ void SerializeMongoRequest(butil::IOBuf* buf,
             buf->append(&header, sizeof(header));
             int flags = req->flags();
             buf->append(&flags, sizeof(flags));
-            buf->append(req->full_collection_name());
-            buf->append("\0");
+            buf->append(full_collection_name);
             int number_to_skip = req->number_to_skip();
             int number_to_return = req->number_to_return();
             buf->append(&number_to_skip, sizeof(number_to_skip));
@@ -344,7 +345,7 @@ void SerializeMongoRequest(butil::IOBuf* buf,
         case DB_GETMORE:
         {
             mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 1 + 2 * sizeof(int32_t) + sizeof(int64_t)),
+                (int)(sizeof(mongo_head_t) + req->full_collection_name().size() + 2 * sizeof(int32_t) + sizeof(int64_t)),
                 1,
                 0,
                 DB_GETMORE
@@ -353,7 +354,7 @@ void SerializeMongoRequest(butil::IOBuf* buf,
             buf->append(&header, sizeof(header));
             const int zero = 0;
             buf->append(&zero, sizeof(zero));
-            buf->append(req->full_collection_name());
+            buf->append(full_collection_name);
             buf->append("\0");
             const int number_to_return = req->number_to_return();
             buf->append(&number_to_return, sizeof(number_to_return));
