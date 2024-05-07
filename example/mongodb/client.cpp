@@ -61,7 +61,15 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
 
         // 创建 BSON 视图
         bsoncxx::document::view view(data + offset, doc_length);
-        
+
+        auto it = view.find("payload");
+        if (it != view.end()) {
+            // 如果找到了 payload 字段，将其转换为字符串
+            bsoncxx::types::b_binary payload = it->get_binary();
+            std::string payload_str(reinterpret_cast<const char*>(payload.bytes), payload.size);
+            std::cout << "payload: " << payload_str << std::endl;
+        }
+
         // 将 BSON 转换为 JSON 并输出
         std::cout << bsoncxx::to_json(view) << std::endl;
         
