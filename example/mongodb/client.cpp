@@ -156,8 +156,10 @@ static std::string generate_client_nonce() {
     std::string nonce;
     nonce.resize(24);
     for (int i = 0; i < 24; i++) {
-        nonce[i] = butil::fast_rand_less_than(256);
+        nonce[i] = i;
+        // nonce[i] = butil::fast_rand_less_than(256);
     }
+    nonce[23] = '\0';  // 确保字符串以NULL结尾
     return nonce;
 }
 
@@ -271,6 +273,7 @@ int GenerateCredential1(std::string* auth_str) {
     out_str += ",r=";
     // scram_buf_write (encoded_nonce, strlen(encoded_nonce), outbuf, outbufmax, &outbuflen);
     out_str += encoded_nonce;
+    LOG(INFO) << "ivyjxj: " << encoded_nonce;
     LOG(INFO) << "out_str: " << out_str;
 
     // scram_buf_write (
@@ -302,9 +305,14 @@ int GenerateCredential1(std::string* auth_str) {
     // char decoded_salt[1024];
     // int decoded_salt_len = base64_decode(s, decoded_salt, sizeof(decoded_salt));
     std::string decoded_salt;
-    butil::Base64Encode(s, &decoded_salt);
+    butil::Base64Decode(s, &decoded_salt);
     // print_hex((const char *) decoded_salt);
     scram_salt_password (salted_password, hashed_password, strlen(hashed_password), (uint8_t *) decoded_salt.c_str(), decoded_salt.size(), i);
+    //按数字打印salted_password
+    for (int i = 0; i < 20; i++) {
+        printf("%d ", salted_password[i]);
+    }
+    printf("\n~~~~~~~~~~~~~~~\n");
 
     //generate proof
     uint8_t stored_key[32];
@@ -328,6 +336,14 @@ int GenerateCredential1(std::string* auth_str) {
     /* StoredKey := H(client_key) */
     crypto_openssl_sha1 (client_key, (size_t) 20, stored_key);
 
+    //按数字打印stored_key
+    for (int i = 0; i < 20; i++) {
+        printf("%d ", stored_key[i]);
+    }
+    printf("\n=============\n");
+
+    printf("ivyjxjjjjjauthmsg = %s\n", authmsg.c_str());
+
     /* ClientSignature := HMAC(StoredKey, AuthMessage) */
     HMAC (EVP_sha1 (),
                         stored_key,
@@ -337,13 +353,20 @@ int GenerateCredential1(std::string* auth_str) {
                         client_signature, &key_len);
 
     /* ClientProof := ClientKey XOR ClientSignature */
+    //按数字打印client_signature
+    for (int i = 0; i < 20; i++) {
+        printf("%d ", client_signature[i]);
+    }
+    printf("\n-------\n");
 
     for (i = 0; i < 20; i++) {
         client_proof[i] = client_key[i] ^ client_signature[i];
     }
+    LOG(INFO) << "ivyjxj client_proof: " << client_proof;
     // rr = base64_encode ((const char*)client_proof, (char *) outbuf + outbuflen, 20);
     std::string proof_base64;
     butil::Base64Encode(client_proof, &proof_base64);
+    LOG(INFO) << "ivyjxj proof_base64: " << proof_base64;
     // if (-1 == rr) {
     //     return false;
     // }
