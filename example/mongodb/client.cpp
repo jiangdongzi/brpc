@@ -397,7 +397,7 @@ int GenerateCredential1(std::string* auth_str) {
         // Append the command fields
         builder << "saslContinue" << 1
                 << "conversationId" << conv_id
-                << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, outbuflen, (const unsigned char*)out_str.c_str()};
+                << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, (uint32_t)out_str.size(), (uint8_t*)out_str.c_str()};
         auto v = builder.view();
     // char fullnName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
@@ -437,6 +437,8 @@ int GenerateCredential1(std::string* auth_str) {
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
 
     return 0;
+
+
 }
 
 int base64_encode(const char* input, char* output, int input_length) {
@@ -559,7 +561,7 @@ int LastAuthStep() {
 
     // char fullCollectionName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    int32_t fullCollectionNameLen = strlen(fullCollectionName) + 1;
+    int32_t fullCollectionNameLen = strlen(fullCollectionName);
     int32_t flags = 0; // No special options
     int32_t numberToSkip = 0;
     int32_t numberToReturn = 1; // Return all matching documents
