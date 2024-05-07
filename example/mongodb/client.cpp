@@ -42,6 +42,8 @@
 #include <openssl/md5.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
+#include "butil/base64.h"
+#include "butil/fast_rand.h"
 
 DEFINE_int32(thread_num, 10, "Number of threads to send requests");
 DEFINE_bool(use_bthread, false, "Use bthread to send requests");
@@ -66,8 +68,7 @@ butil::static_atomic<int> g_sender_count = BUTIL_STATIC_ATOMIC_INIT(0);
 static char r[256], s[256];
 static int i;
 char client_nonce[24];
-char encoded_nonce[1024];
-int encoded_nonce_len;
+std::string encoded_nonce;
 char first_payload[4096] = {0};
 uint32_t first_payload_len = 0;
 int conv_id;
@@ -150,14 +151,13 @@ int base64_decode(const char *base64_input, char *outbuf, size_t outbuf_size) {
     return total;
 }
 
-static // 生成客户端随机数的函数
-void generate_client_nonce(char *nonce, size_t size) {
-    const char *chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    for (size_t i = 0; i < size; i++) {
-        int index = rand() % (strlen(chars));
-        nonce[i] = chars[index];
+static std::string generate_client_nonce() {
+    std::string nonce;
+    nonce.resize(24);
+    for (int i = 0; i < 24; i++) {
+        nonce[i] = butil::fast_rand_less_than(256);
     }
-    nonce[size] = '\0';  // 字符串结束符
+    return nonce;
 }
 
 static bool
@@ -398,33 +398,38 @@ int base64_encode(const char* input, char* output, int input_length) {
     return bufferPtr->length;
 }
 
+static void AppendBinary(bsoncxx::builder::basic::document& builder,
+                         const std::string& key,
+                         const std::string& value) {
+    builder.append(bsoncxx::builder::basic::kvp(key, bsoncxx::types::b_binary{
+        bsoncxx::binary_sub_type::k_binary,
+        (uint32_t)value.size(),
+        reinterpret_cast<const uint8_t*>(value.c_str())
+    }));
+}
+
 int GenerateCredential(std::string* auth_str) {
-    char client_nonce[24];
-    generate_client_nonce(client_nonce, 23);  // 生成一个长度为 23 的随机数
-    encoded_nonce_len = base64_encode(client_nonce, encoded_nonce, sizeof(client_nonce));
-    char first_message[128];
-    snprintf(first_message, sizeof(first_message), "n,,n=myUser,r=%s", encoded_nonce);
+    std::string client_nonce = generate_client_nonce();
+    butil::Base64Encode(client_nonce, &encoded_nonce);
+    std::string first_message = "n,,n=myUser,r=" + encoded_nonce;
 
     bsoncxx::builder::basic::document command;
     command.append(bsoncxx::builder::basic::kvp("saslStart", 1));
     command.append(bsoncxx::builder::basic::kvp("mechanism", "SCRAM-SHA-1"));
-    command.append(bsoncxx::builder::basic::kvp("payload", bsoncxx::types::b_binary{
-        bsoncxx::binary_sub_type::k_binary,
-        (uint32_t)strlen(first_message),
-        reinterpret_cast<const uint8_t*>(first_message)
-    }));
+    AppendBinary(command, "payload", first_message);
     command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
 
     // 将 BSON 文档转换为 bson_t*
     bsoncxx::document::view_or_value view = command.view();
     // char fullnName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
+    // char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
+    std::string fullCollectionName = "myDatabase.$cmd";
 
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-        brpc::Channel channel;
+    brpc::Channel channel;
     
     // Initialize the channel, NULL means using default options. 
     brpc::ChannelOptions options;
@@ -435,13 +440,10 @@ int GenerateCredential(std::string* auth_str) {
         return -1;
     }
 
-    // char fullCollectionName[256];
-    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    int32_t fullCollectionNameLen = strlen(fullCollectionName) + 1;
     int32_t flags = 0; // No special options
     int32_t numberToSkip = 0;
     int32_t numberToReturn = 1; // Return all matching documents
-    request.set_full_collection_name(fullCollectionName, fullCollectionNameLen);
+    request.set_full_collection_name(fullCollectionName);
     request.set_number_to_return(numberToReturn);
     // bsoncxx::builder::stream::document document{};
     auto v = command.view();
