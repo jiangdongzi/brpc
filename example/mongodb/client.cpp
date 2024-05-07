@@ -18,6 +18,8 @@
 // A multi-threaded client getting keys from a memcache server constantly.
 
 #include <cstddef>
+#include <stdlib.h>
+#include <stdio.h>
 #include <gflags/gflags.h>
 #include <bthread/bthread.h>
 #include <butil/logging.h>
@@ -53,6 +55,9 @@ bvar::LatencyRecorder g_latency_recorder("client");
 bvar::Adder<int> g_error_count("client_error_count");
 butil::static_atomic<int> g_sender_count = BUTIL_STATIC_ATOMIC_INIT(0);
 
+static char r[256], s[256];
+static int i;
+
 void parse_continuous_bson_data(const uint8_t* data, size_t length) {
     size_t offset = 0;
     while (offset < length) {
@@ -68,6 +73,7 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
             bsoncxx::types::b_binary payload = it->get_binary();
             std::string payload_str(reinterpret_cast<const char*>(payload.bytes), payload.size);
             std::cout << "payload: " << payload_str << std::endl;
+            sscanf(payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
         }
 
         // 将 BSON 转换为 JSON 并输出
