@@ -288,12 +288,13 @@ int GenerateCredential1(std::string* auth_str) {
 
       /* ClientKey := HMAC(saltedPassword, "Client Key") */
       //    HMAC (EVP_sha1 (), password, password_len, salt, salt_len, output, NULL);
+    uint32_t key_len;
     HMAC (EVP_sha1 (),
                           salted_password,
                           20,
                           (uint8_t *) MONGOC_SCRAM_CLIENT_KEY,
                           (int) strlen (MONGOC_SCRAM_CLIENT_KEY),
-                          client_key);
+                          client_key, &key_len);
 
     /* StoredKey := H(client_key) */
     crypto_openssl_sha1 (client_key, (size_t) 20, stored_key);
@@ -302,9 +303,9 @@ int GenerateCredential1(std::string* auth_str) {
     HMAC (EVP_sha1 (),
                         stored_key,
                         20,
-                        authmsg,
+                        (uint8_t*)authmsg,
                         auth_messagelen,
-                        client_signature);
+                        client_signature, &key_len);
 
     /* ClientProof := ClientKey XOR ClientSignature */
 
@@ -327,8 +328,7 @@ int GenerateCredential1(std::string* auth_str) {
         // Append the command fields
         builder << "saslContinue" << 1
                 << "conversationId" << conv_id
-                << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, outbuflen, outbuf}
-                << "$db" << "myDatabase";
+                << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, outbuflen, outbuf};
         auto v = builder.view();
     // char fullnName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
@@ -510,6 +510,7 @@ int main(int argc, char* argv[]) {
 
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
     GenerateCredential(NULL);
+    GenerateCredential1(NULL);
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
