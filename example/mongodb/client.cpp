@@ -164,7 +164,6 @@ int GenerateCredential1(std::string* auth_str) {
     }
     hexOutput[MD5_DIGEST_LENGTH * 2] = '\0';  // 确保字符串以NULL结尾
     char *hashed_password = hexOutput;
-    // uint8_t outbuf[4096] = {0};
     std::string out_str;
     const char* user_name = "myUser";
     out_str = "n,,n=";
