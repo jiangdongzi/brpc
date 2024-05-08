@@ -208,7 +208,7 @@ int GenerateCredential1(std::string* auth_str) {
             << "conversationId" << conv_id
             << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, (uint32_t)out_str.size(), (uint8_t*)out_str.c_str()};
     auto v = builder.view();
-    char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
+    std::string fullCollectionName = "myDatabase.$cmd"; // Ensure null-terminated string
 
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
@@ -224,15 +224,8 @@ int GenerateCredential1(std::string* auth_str) {
         return -1;
     }
 
-    // char fullCollectionName[256];
-    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    int32_t fullCollectionNameLen = strlen(fullCollectionName);
-    int32_t flags = 0; // No special options
-    int32_t numberToSkip = 0;
-    int32_t numberToReturn = 1; // Return all matching documents
-    request.set_full_collection_name(fullCollectionName, fullCollectionNameLen);
-    request.set_number_to_return(numberToReturn);
-    // bsoncxx::builder::stream::document document{};
+    request.set_full_collection_name(fullCollectionName);
+    request.set_number_to_return(1);
     request.set_message((char*)v.data(), v.length());
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -246,26 +239,6 @@ int GenerateCredential1(std::string* auth_str) {
     return 0;
 
 
-}
-
-int base64_encode(const char* input, char* output, int input_length) {
-    BIO *b64, *bio;
-    BUF_MEM *bufferPtr;
-
-    b64 = BIO_new(BIO_f_base64());
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
-    bio = BIO_new(BIO_s_mem());
-    bio = BIO_push(b64, bio);
-
-    BIO_write(bio, input, input_length);
-    BIO_flush(bio);
-    BIO_get_mem_ptr(bio, &bufferPtr);
-
-    memcpy(output, bufferPtr->data, bufferPtr->length);
-    output[bufferPtr->length] = '\0'; // Null-terminate!
-
-    // BIO_free_all(bio); // Also frees BUF_MEM bufferPtr
-    return bufferPtr->length;
 }
 
 static void AppendBinary(bsoncxx::builder::basic::document& builder,
@@ -310,11 +283,8 @@ int GenerateCredential(std::string* auth_str) {
         return -1;
     }
 
-    int32_t flags = 0; // No special options
-    int32_t numberToSkip = 0;
-    int32_t numberToReturn = 1; // Return all matching documents
     request.set_full_collection_name(fullCollectionName);
-    request.set_number_to_return(numberToReturn);
+    request.set_number_to_return(1);
     // bsoncxx::builder::stream::document document{};
     auto v = command.view();
     request.set_message((char*)v.data(), v.length());
@@ -345,11 +315,6 @@ int LastAuthStep() {
     // 注意：根据你的需要，如果payload应该是空的二进制数据，你可以如下设置：
     builder.append(kvp("payload", bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, 0, nullptr}));
     auto v = builder.view();
-
-
-    // 将 BSON 文档转换为 bson_t*
-    // char fullnName[256];
-    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
     std::string fullCollectionName = "myDatabase.$cmd"; // Ensure null-terminated string
 
     brpc::policy::MongoRequest request;
@@ -366,11 +331,8 @@ int LastAuthStep() {
         return -1;
     }
 
-    // char fullCollectionName[256];
-    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
     request.set_full_collection_name(fullCollectionName);
     request.set_number_to_return(1);
-    // bsoncxx::builder::stream::document document{};
     request.set_message((char*)v.data(), v.length());
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
