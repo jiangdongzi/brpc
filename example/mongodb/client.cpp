@@ -144,7 +144,6 @@ std::string SCRAM_salt_password(const std::string& password,
                                  int iterations) {
     std::string start_key = salt + std::string("\x00\x00\x00\x01", 4);
     std::string intermediate_digest;
-    intermediate_digest.resize(20);
     std::string output = intermediate_digest = HMAC_SHA1(password, start_key);
     for (int i = 2; i <= iterations; i++) {
         intermediate_digest = HMAC_SHA1(password, intermediate_digest);
