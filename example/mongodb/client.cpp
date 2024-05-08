@@ -70,15 +70,9 @@ static char r[256], s[256];
 static int i;
 char client_nonce[24];
 std::string encoded_nonce;
-char first_payload[4096] = {0};
-uint32_t first_payload_len = 0;
+std::string first_payload_str;
 int conv_id;
-uint8_t salted_password[32];
-// char authmsg[1024] = {0};
-// uint32_t auth_messagelen = 0;
 std::string authmsg;
-uint32_t auth_max = 1024;
-char output_v[4096] = {0};
 std::string output_v_str;
 int step = 0;
 std::string salted_password_str;
@@ -103,12 +97,10 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
             std::string payload_str(reinterpret_cast<const char*>(payload.bytes), payload.size);
             if (i == 0) {
                 sscanf(payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
-                memcpy(first_payload, payload_str.c_str(), payload_str.size());
-                first_payload_len = payload_str.size();
                 conv_id = view["conversationId"].get_int32();
+                first_payload_str.swap(payload_str);
             }
             if (output_v_str.empty() && step > 3) {
-                memcpy(output_v, payload_str.c_str() + 2, payload_str.size() - 2);
                 output_v_str = payload_str.substr(2);
             }
         }
@@ -173,7 +165,7 @@ int GenerateCredential1(std::string* auth_str) {
     authmsg.append(out_str.substr(3));
     authmsg.append(",");
     LOG(INFO) << "authmsg: " << authmsg;
-    authmsg.append(first_payload);
+    authmsg += first_payload_str;
     authmsg.append(",");
     out_str.clear();
     out_str = "c=biws,r=";
@@ -319,7 +311,7 @@ int LastAuthStep() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-        brpc::Channel channel;
+    brpc::Channel channel;
     
     // Initialize the channel, NULL means using default options. 
     brpc::ChannelOptions options;
