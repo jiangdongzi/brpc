@@ -43,6 +43,7 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include "butil/base64.h"
+#include "butil/sha1.h"
 #include "butil/fast_rand.h"
 
 DEFINE_int32(thread_num, 10, "Number of threads to send requests");
@@ -342,10 +343,12 @@ int GenerateCredential1(std::string* auth_str) {
     printf("\n=====cli key========\n");
 
     crypto_openssl_sha1 (client_key, (size_t) 20, stored_key);
+    std::string stored_key_str = butil::SHA1HashString(std::string((char*)client_key, 20));
 
     //按数字打印stored_key
     for (int i = 0; i < 20; i++) {
         printf("%d ", stored_key[i]);
+        printf("%d ", stored_key_str[i]);
     }
     printf("\n=============\n");
 
@@ -353,8 +356,8 @@ int GenerateCredential1(std::string* auth_str) {
 
     /* ClientSignature := HMAC(StoredKey, AuthMessage) */
     HMAC (EVP_sha1 (),
-                        stored_key,
-                        20,
+                        stored_key_str.c_str(),
+                        stored_key_str.size(),
                         (uint8_t*)authmsg.c_str(),
                         authmsg.size(),
                         client_signature, &key_len);
