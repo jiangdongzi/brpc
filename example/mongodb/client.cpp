@@ -312,20 +312,11 @@ int GenerateCredential1(std::string* auth_str) {
     LOG(INFO) << "second authmsg: " << authmsg;
     // scram_buf_write (",p=", -1, outbuf, outbufmax, &outbuflen);
     out_str += ",p=";
-    // char decoded_salt[1024];
-    // int decoded_salt_len = base64_decode(s, decoded_salt, sizeof(decoded_salt));
     std::string decoded_salt;
     butil::Base64Decode(s, &decoded_salt);
-    // print_hex((const char *) decoded_salt);
     scram_salt_password (salted_password, hashed_password, strlen(hashed_password), (uint8_t *) decoded_salt.c_str(), decoded_salt.size(), i);
-    //按数字打印salted_password
-    for (int i = 0; i < 20; i++) {
-        printf("%d ", salted_password[i]);
-    }
-    printf("\n~~~~~~~~~~~~~~~\n");
 
     //generate proof
-    uint8_t client_signature[32];
     std::string client_proof;
     client_proof.resize(20);
 
@@ -334,24 +325,11 @@ int GenerateCredential1(std::string* auth_str) {
     std::string stored_key_str = butil::SHA1HashString(client_key_str);
     const std::string client_signature_str = HMAC_SHA1(stored_key_str, authmsg);
 
-    /* ClientProof := ClientKey XOR ClientSignature */
-    //按数字打印client_signature
-    for (int i = 0; i < 20; i++) {
-        printf("%d ", client_signature[i]);
-    }
-    printf("\n-------\n");
-
     for (i = 0; i < 20; i++) {
         client_proof[i] = client_key_str[i] ^ client_signature_str[i];
     }
     std::string proof_base64;
     butil::Base64Encode(client_proof, &proof_base64);
-    LOG(INFO) << "ivyjxj proof_base64: " << proof_base64;
-    // if (-1 == rr) {
-    //     return false;
-    // }
-
-    // outbuflen += rr;
     out_str += proof_base64;
 
     LOG(INFO) << "out_str: " << out_str;
