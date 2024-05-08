@@ -364,6 +364,7 @@ int GenerateCredential1(std::string* auth_str) {
                         (uint8_t*)authmsg.c_str(),
                         authmsg.size(),
                         client_signature, &key_len);
+    const std::string client_signature_str = HMAC_SHA1(stored_key_str, authmsg);
 
     /* ClientProof := ClientKey XOR ClientSignature */
     //按数字打印client_signature
@@ -373,7 +374,7 @@ int GenerateCredential1(std::string* auth_str) {
     printf("\n-------\n");
 
     for (i = 0; i < 20; i++) {
-        client_proof[i] = client_key_str[i] ^ client_signature[i];
+        client_proof[i] = client_key_str[i] ^ client_signature_str[i];
         //打印以上三个值 proof, client_key, client_signature
         LOG(INFO) << "i: " << i << " client_proof[i]: " << (int)client_proof[i] << " client_key[i]: " << (int)client_key[i] << " client_signature[i]: " << (int)client_signature[i];
     }
