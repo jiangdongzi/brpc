@@ -352,7 +352,6 @@ int GenerateCredential1(std::string* auth_str) {
     }
     printf("\n=====cli key========\n");
 
-    crypto_openssl_sha1 (client_key, (size_t) 20, stored_key);
     std::string stored_key_str = butil::SHA1HashString(client_key_str);
 
     //按数字打印stored_key
