@@ -306,8 +306,8 @@ static std::atomic_bool flag;
 static void TestMongoGenerator() {
     flag.store(true);
     MongoAuthenticator auth;
-    auth.GenerateCredential(nullptr);
-}
+    std::string uri = "mongodb://myUser:mongo:password123@localhost:7017/myDatabase";
+    auth.GenerateCredential(&uri);
 
 void PackMongoRequest(butil::IOBuf* req_buf,
                     SocketMessage**,

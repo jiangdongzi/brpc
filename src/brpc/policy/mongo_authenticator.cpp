@@ -24,10 +24,7 @@
 #include <openssl/hmac.h>
 #include <openssl/buffer.h>
 #include "butil/base64.h"
-#include "butil/iobuf.h"
-#include "butil/string_printf.h"
-#include "butil/sys_byteorder.h"
-#include "brpc/redis_command.h"
+#include "butil/mongo_utils.h"
 #include "butil/base64.h"
 #include "butil/sha1.h"
 #include "butil/fast_rand.h"
@@ -114,6 +111,12 @@ int GetConversationId (const uint8_t* data, size_t length) {
 
 int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     //first step
+    // butil::MongoDBUri uri = butil::parse_mongo_uri("mongodb://myUser:mongo:password123@localhost:7017/myDatabase?authMechanism=SCRAM-SHA-1");
+    butil::MongoDBUri uri = butil::parse_mongo_uri(*auth_str);
+    const std::string& user_name = uri.username;
+    const std::string& password = uri.password;
+    const std::string& database = uri.database;
+    const std::string& host = uri.hosts[0];
     char r[256], s[256];
     int i;
     std::string encoded_nonce;
@@ -125,7 +128,8 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
 
     std::string client_nonce = generate_client_nonce();
     butil::Base64Encode(client_nonce, &encoded_nonce);
-    std::string first_message = "n,,n=myUser,r=" + encoded_nonce;
+    // std::string first_message = "n,,n=myUser,r=" + encoded_nonce;
+    std::string first_message = "n,,n=" + user_name + ",r=" + encoded_nonce;
 
     bsoncxx::builder::basic::document command;
     command.append(bsoncxx::builder::basic::kvp("saslStart", 1));
@@ -134,7 +138,8 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
 
     bsoncxx::document::view_or_value view = command.view();
-    std::string fullCollectionName = "myDatabase.$cmd";
+    // std::string fullCollectionName = "myDatabase.$cmd";
+    std::string fullCollectionName = database + ".$cmd";
 
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
@@ -145,7 +150,7 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     brpc::ChannelOptions options;
     options.protocol = brpc::PROTOCOL_MONGO;
 
-    if (channel.Init("0.0.0.0:7017", "", &options) != 0) {
+    if (channel.Init(host.c_str(), "", &options) != 0) {
         LOG(ERROR) << "Fail to initialize channel";
         return -1;
     }
@@ -178,7 +183,6 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     hexOutput[MD5_DIGEST_LENGTH * 2] = '\0';  // 确保字符串以NULL结尾
     char *hashed_password = hexOutput;
     std::string out_str;
-    const char* user_name = "myUser";
     out_str = "n,,n=";
     out_str.append(user_name).append(",r=").append(encoded_nonce);
     authmsg.append(out_str.substr(3)).append(",").append(first_payload_str).append(",");
