@@ -34,16 +34,6 @@ public:
                          brpc::AuthContext*) const {
         return 0;
     }
-
-private:
-    char r[256], s[256];
-    int i;
-    std::string encoded_nonce;
-    std::string first_payload_str;
-    int conv_id;
-    std::string authmsg;
-    std::string output_v_str;
-    std::string salted_password_str;
 };
 
 }  // namespace policy

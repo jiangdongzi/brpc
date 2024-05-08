@@ -84,6 +84,57 @@ static void AppendBinary(bsoncxx::builder::basic::document& builder,
 
 
 int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
+    char r[256], s[256];
+    int i;
+    std::string encoded_nonce;
+    std::string first_payload_str;
+    int conv_id;
+    std::string authmsg;
+    std::string output_v_str;
+    std::string salted_password_str;
+
+    std::string client_nonce = generate_client_nonce();
+    butil::Base64Encode(client_nonce, &encoded_nonce);
+    std::string first_message = "n,,n=myUser,r=" + encoded_nonce;
+
+    bsoncxx::builder::basic::document command;
+    command.append(bsoncxx::builder::basic::kvp("saslStart", 1));
+    command.append(bsoncxx::builder::basic::kvp("mechanism", "SCRAM-SHA-1"));
+    AppendBinary(command, "payload", first_message);
+    command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
+
+    // 将 BSON 文档转换为 bson_t*
+    bsoncxx::document::view_or_value view = command.view();
+    std::string fullCollectionName = "myDatabase.$cmd";
+
+    brpc::policy::MongoRequest request;
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    brpc::Channel channel;
+    
+    // Initialize the channel, NULL means using default options. 
+    brpc::ChannelOptions options;
+    options.protocol = brpc::PROTOCOL_MONGO;
+
+    if (channel.Init("0.0.0.0:7017", "", &options) != 0) {
+        LOG(ERROR) << "Fail to initialize channel";
+        return -1;
+    }
+
+    request.set_full_collection_name(fullCollectionName);
+    request.set_number_to_return(1);
+    // bsoncxx::builder::stream::document document{};
+    auto v = command.view();
+    request.set_message((char*)v.data(), v.length());
+    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+
+
+
 
     return 0;
 }
