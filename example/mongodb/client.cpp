@@ -350,7 +350,7 @@ int LastAuthStep() {
     // 将 BSON 文档转换为 bson_t*
     // char fullnName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
+    std::string fullCollectionName = "myDatabase.$cmd"; // Ensure null-terminated string
 
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
@@ -368,12 +368,8 @@ int LastAuthStep() {
 
     // char fullCollectionName[256];
     // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    int32_t fullCollectionNameLen = strlen(fullCollectionName);
-    int32_t flags = 0; // No special options
-    int32_t numberToSkip = 0;
-    int32_t numberToReturn = 1; // Return all matching documents
-    request.set_full_collection_name(fullCollectionName, fullCollectionNameLen);
-    request.set_number_to_return(numberToReturn);
+    request.set_full_collection_name(fullCollectionName);
+    request.set_number_to_return(1);
     // bsoncxx::builder::stream::document document{};
     request.set_message((char*)v.data(), v.length());
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
