@@ -390,26 +390,11 @@ int VerifyServerSign() {
 
     char encoded_server_signature[64];
     int32_t encoded_server_signature_len;
-    uint8_t server_signature[32];
-    uint8_t server_key[32];
-    const size_t key_len = strlen (MONGOC_SCRAM_SERVER_KEY);
-    uint32_t out_len;
-    HMAC (EVP_sha1 (),
-                          salted_password,
-                          20,
-                          (uint8_t *) MONGOC_SCRAM_SERVER_KEY,
-                          (int) key_len,
-                          server_key, &out_len);
     const std::string server_key_str = HMAC_SHA1(salted_password_str, MONGOC_SCRAM_SERVER_KEY);
     //authmsg hmac
-    HMAC (EVP_sha1 (),
-                        (const unsigned char*)server_key_str.c_str(),
-                        20,
-                        (const unsigned char*)authmsg.c_str(),
-                        authmsg.size(),
-                        server_signature, &out_len);
+    const std::string server_signature_str = HMAC_SHA1(server_key_str, authmsg);
     //base64 endcode server_signature
-    encoded_server_signature_len = base64_encode ((const char*)server_signature, encoded_server_signature, 20);
+    encoded_server_signature_len = base64_encode ((const char*)server_signature_str.c_str(), encoded_server_signature, 20);
     printf ("encoded_server_signature = %s\n", encoded_server_signature);
     //compare encoded_server_signature and output_v, need care length
     if (strncmp (encoded_server_signature, output_v, encoded_server_signature_len) != 0) {
