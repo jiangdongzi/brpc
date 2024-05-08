@@ -183,7 +183,7 @@ int GenerateCredential1(std::string* auth_str) {
     }
     std::string proof_base64;
     butil::Base64Encode(client_proof, &proof_base64);
-    out_str += proof_base64;
+    out_str.append(proof_base64);
 
     bsoncxx::builder::stream::document builder{};
 
@@ -248,9 +248,6 @@ int GenerateCredential(std::string* auth_str) {
 
     // 将 BSON 文档转换为 bson_t*
     bsoncxx::document::view_or_value view = command.view();
-    // char fullnName[256];
-    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
-    // char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
     std::string fullCollectionName = "myDatabase.$cmd";
 
     brpc::policy::MongoRequest request;
