@@ -325,34 +325,13 @@ int GenerateCredential1(std::string* auth_str) {
     printf("\n~~~~~~~~~~~~~~~\n");
 
     //generate proof
-    uint8_t stored_key[32];
     uint8_t client_signature[32];
-//    unsigned char client_proof[32];
     std::string client_proof;
     client_proof.resize(20);
-    uint8_t client_key[32];
-    uint32_t key_len;
 
     const std::string client_key_str = HMAC_SHA1(std::string((char*)salted_password, 20), MONGOC_SCRAM_CLIENT_KEY);
 
     std::string stored_key_str = butil::SHA1HashString(client_key_str);
-
-    //按数字打印stored_key
-    for (int i = 0; i < 20; i++) {
-        printf("%d ", stored_key[i]);
-        printf("%d ", stored_key_str[i]);
-    }
-    printf("\n=============\n");
-
-    printf("ivyjxjjjjjauthmsg = %s\n", authmsg.c_str());
-
-    /* ClientSignature := HMAC(StoredKey, AuthMessage) */
-    HMAC (EVP_sha1 (),
-                        stored_key_str.c_str(),
-                        stored_key_str.size(),
-                        (uint8_t*)authmsg.c_str(),
-                        authmsg.size(),
-                        client_signature, &key_len);
     const std::string client_signature_str = HMAC_SHA1(stored_key_str, authmsg);
 
     /* ClientProof := ClientKey XOR ClientSignature */
