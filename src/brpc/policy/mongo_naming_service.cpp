@@ -34,6 +34,10 @@
 #include <string>   // std::string
 #include <unordered_set>
 #include <vector>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 namespace brpc {
 namespace policy {
@@ -75,11 +79,59 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
     return response.message();
 }
 
+std::vector<std::string> ResolveHostsToIPPort(const std::vector<std::string>& hosts) {
+    std::vector<std::string> results;
+    struct addrinfo hints, *res, *p;
+    int status;
+    char ipstr[INET6_ADDRSTRLEN];
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // AF_INET or AF_INET6
+    hints.ai_socktype = SOCK_STREAM;
+
+    for (const auto& host_port : hosts) {
+        size_t colonPos = host_port.find(':');
+        if (colonPos == std::string::npos) {
+            std::cerr << "Invalid host:port format" << std::endl;
+            continue; // Skip this entry if format is incorrect
+        }
+
+        std::string host = host_port.substr(0, colonPos);
+        std::string port = host_port.substr(colonPos + 1);
+
+        if ((status = getaddrinfo(host.c_str(), port.c_str(), &hints, &res)) != 0) {
+            std::cerr << "getaddrinfo error for " << host << " with port " << port << ": " << gai_strerror(status) << std::endl;
+            continue; // Skip to the next host if resolution fails
+        }
+
+        for (p = res; p != NULL; p = p->ai_next) {
+            void *addr;
+            // Get the pointer to the address itself, different fields in IPv4 and IPv6:
+            if (p->ai_family == AF_INET) { // IPv4
+                struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+                addr = &(ipv4->sin_addr);
+            } else { // IPv6
+                struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+                addr = &(ipv6->sin6_addr);
+            }
+
+            // Convert the IP to a string and store it in results:
+            inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+            results.push_back(std::string(ipstr) + ":" + port);
+            break; // Only store the first resolved address
+        }
+
+        freeaddrinfo(res); // Free the linked list
+    }
+
+    return results;
+}
+
+
 int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *servers) {
     servers->clear();
     butil::MongoDBUri mongo_uri = butil::parse_mongo_uri(uri);
-    std::vector<std::string> hosts;
-    hosts.swap(mongo_uri.hosts);
+    std::vector<std::string> hosts = ResolveHostsToIPPort(mongo_uri.hosts);
     std::unordered_set<std::string> visited_hosts;
     while (!hosts.empty()) {
         const std::string& host = hosts.back();
@@ -92,12 +144,6 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
         if (is_master_msg.empty()) {
             continue;
         }
-        // bsoncxx::document::view_or_value view = bsoncxx::from_json(is_master_msg);
-        // bsoncxx::document::element ismaster = view["ismaster"];
-        // if (ismaster.type() == bsoncxx::type::k_bool && ismaster.get_bool().value) {
-        //     servers->emplace_back(host, "master");
-        // }
-        // bsoncxx::document::element hosts_element = view["hosts"];
         const uint8_t* data = reinterpret_cast<const uint8_t*>(is_master_msg.c_str());
         uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data);
         if (doc_length != is_master_msg.size()) {
@@ -120,29 +166,11 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
             }
         }
     }
-
-
-    // const auto& reply = response.reply(0);
-    // for (int i = 0; i < reply.size(); i++) {
-    //     const auto& slot_start = reply[i][0];
-    //     const auto& slot_end = reply[i][1];
-    //     const std::string tag = std::to_string(slot_start.integer()) + "-" + std::to_string(slot_end.integer());
-
-    //     const auto& ip = reply[i][2][0];
-    //     const auto& port = reply[i][2][1];
-    //     butil::EndPoint point;
-    //     if (butil::str2endpoint(ip.c_str(), port.integer(), &point) != 0 &&
-    //         butil::hostname2endpoint(ip.c_str(), port.integer(), &point) != 0) {
-    //         LOG(ERROR) << "Invalid address=`" << ip.c_str() << ":" << port.integer() << '\'';
-    //         continue;
-    //     }
-    //     servers->emplace_back(point, tag);
-    // }
     return 0;
 }
 
 void MongoNamingService::Describe(std::ostream &os, const DescribeOptions &) const {
-    os << "redis_cluster";
+    os << "mongo_naming_service";
     return;
 }
 
