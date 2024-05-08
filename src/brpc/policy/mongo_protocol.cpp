@@ -301,14 +301,14 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
     mongo_done->Run();
 }
 
-static std::atomic_bool flag;
+// static std::atomic_bool flag;
 
-static void TestMongoGenerator() {
-    flag.store(true);
-    MongoAuthenticator auth;
-    std::string uri = "mongodb://myUser:password123@localhost:7017/myDatabase";
-    auth.GenerateCredential(&uri);
-}
+// static void TestMongoGenerator() {
+//     flag.store(true);
+//     flag.store(true);
+//     MongoAuthenticator auth("mongodb://myUser:password123@localhost:7017/myDatabase");
+//     auth.GenerateCredential(nullptr);
+// }
 
 void PackMongoRequest(butil::IOBuf* req_buf,
                     SocketMessage**,
@@ -321,9 +321,6 @@ void PackMongoRequest(butil::IOBuf* req_buf,
     ControllerPrivateAccessor accessor(cntl);
     accessor.get_sending_socket()->set_correlation_id(correlation_id);
     req_buf->append(request_body);
-    if (!flag.load()) {
-        TestMongoGenerator();
-    }
 }
 
 void SerializeMongoRequest(butil::IOBuf* buf,

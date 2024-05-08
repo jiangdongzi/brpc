@@ -109,13 +109,12 @@ int GetConversationId (const uint8_t* data, size_t length) {
     return view["conversationId"].get_int32().value;
 }
 
-int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
+int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     //first step
-    butil::MongoDBUri uri = butil::parse_mongo_uri(*auth_str);
-    const std::string& user_name = uri.username;
-    const std::string& password = uri.password;
-    const std::string& database = uri.database;
-    const std::string& host = uri.hosts[0];
+    const std::string& user_name = _uri.username;
+    const std::string& password = _uri.password;
+    const std::string& database = _uri.database;
+    const std::string& host = _uri.hosts[0];
     char r[256], s[256];
     int i;
     std::string encoded_nonce;

@@ -19,6 +19,7 @@
 #define BRPC_POLICY_REDIS_AUTHENTICATOR_H
 
 #include "brpc/authenticator.h"
+#include "butil/mongo_utils.h"
 
 namespace brpc {
 namespace policy {
@@ -26,7 +27,9 @@ namespace policy {
 // Request to redis for authentication.
 class MongoAuthenticator : public Authenticator {
 public:
-    MongoAuthenticator(){}
+    MongoAuthenticator(const std::string& uri_str){
+        _uri = butil::parse_mongo_uri(uri_str);
+    }
 
     int GenerateCredential(std::string* auth_str) const;
 
@@ -34,6 +37,8 @@ public:
                          brpc::AuthContext*) const {
         return 0;
     }
+private:
+    butil::MongoDBUri _uri;
 };
 
 }  // namespace policy
