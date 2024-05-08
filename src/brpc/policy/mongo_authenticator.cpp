@@ -133,7 +133,6 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     AppendBinary(command, "payload", first_message);
     command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
 
-    // 将 BSON 文档转换为 bson_t*
     bsoncxx::document::view_or_value view = command.view();
     std::string fullCollectionName = "myDatabase.$cmd";
 
@@ -222,6 +221,44 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     }
     const std::string second_payload_str = GetPayload((const uint8_t*)response.message().c_str(), response.message().size());
     LOG(INFO) << "second_payload_str: " << second_payload_str;
+
+    //verify server signature
+    const std::string server_key_str = HMAC_SHA1(salted_password_str, MONGOC_SCRAM_SERVER_KEY);
+    //authmsg hmac
+    const std::string server_signature_str = HMAC_SHA1(server_key_str, authmsg);
+    std::string encoded_server_signature_str;
+    butil::Base64Encode(server_signature_str, &encoded_server_signature_str);
+    const std::string out_v = second_payload_str.substr(2);
+    if (out_v != encoded_server_signature_str) {
+        LOG(ERROR) << "server signature verification failed";
+        return -1;
+    } else {
+        LOG(INFO) << "server signature verification success";
+    }
+
+    //last step
+    // 创建一个BSON文档构建器
+    using namespace bsoncxx::builder::basic;
+    builder.clear();
+    // 添加saslContinue和conversationId字段
+    builder.append(kvp("saslContinue", 1));
+    builder.append(kvp("conversationId", conv_id));
+
+    // 添加一个空的payload字段
+    // 注意：根据你的需要，如果payload应该是空的二进制数据，你可以如下设置：
+    builder.append(kvp("payload", bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, 0, nullptr}));
+    v = builder.view();
+    request.set_message((char*)v.data(), v.length());
+    cntl.Reset();
+
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+
+    bool is_done = IsDone((const uint8_t*)response.message().c_str(), response.message().size());
+    LOG(INFO) << "is_done: " << is_done;
 
     return 0;
 }

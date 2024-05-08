@@ -18,4 +18,7 @@
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/tools/rpc_press/*.cpp")
 add_executable(rpc_press ${SOURCES})
 target_link_libraries(rpc_press brpc-static ${DYNAMIC_LIB})
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include/")
+target_link_libraries(rpc_press bsoncxx)
 install(TARGETS rpc_press RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

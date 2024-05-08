@@ -20,6 +20,7 @@
 #include <google/protobuf/descriptor.h>         // MethodDescriptor
 #include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
+#include <mutex>
 #include "butil/time.h" 
 #include "butil/iobuf.h"                         // butil::IOBuf
 #include "brpc/controller.h"               // Controller
@@ -37,6 +38,7 @@
 #include "bsoncxx/json.hpp"
 #include "bsoncxx/types.hpp"
 #include "bsoncxx/document/view.hpp"
+#include "brpc/policy/mongo_authenticator.h"
 
 extern "C" {
 void bthread_assign_data(void* data);
@@ -299,6 +301,14 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
     mongo_done->Run();
 }
 
+static std::atomic_bool flag;
+
+static void TestMongoGenerator() {
+    flag.store(true);
+    MongoAuthenticator auth;
+    auth.GenerateCredential(nullptr);
+}
+
 void PackMongoRequest(butil::IOBuf* req_buf,
                     SocketMessage**,
                     uint64_t correlation_id,
@@ -310,6 +320,9 @@ void PackMongoRequest(butil::IOBuf* req_buf,
     ControllerPrivateAccessor accessor(cntl);
     accessor.get_sending_socket()->set_correlation_id(correlation_id);
     req_buf->append(request_body);
+    if (!flag.load()) {
+        TestMongoGenerator();
+    }
 }
 
 void SerializeMongoRequest(butil::IOBuf* buf,

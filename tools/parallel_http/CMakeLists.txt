@@ -18,3 +18,8 @@
 add_executable(parallel_http parallel_http.cpp)
 target_link_libraries(parallel_http brpc-static ${DYNAMIC_LIB})
 install(TARGETS parallel_http RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include/")
+link_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/lib")
+target_link_libraries(parallel_http bsoncxx)
