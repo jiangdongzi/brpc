@@ -126,10 +126,8 @@ static std::string generate_client_nonce() {
     std::string nonce;
     nonce.resize(24);
     for (int i = 0; i < 24; i++) {
-        nonce[i] = i;
-        // nonce[i] = butil::fast_rand_less_than(256);
+        nonce[i] = butil::fast_rand_less_than(256);
     }
-    nonce[23] = '\0';  // 确保字符串以NULL结尾
     return nonce;
 }
 
