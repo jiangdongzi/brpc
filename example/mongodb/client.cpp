@@ -99,8 +99,6 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
             // 如果找到了 payload 字段，将其转换为字符串
             bsoncxx::types::b_binary payload = it->get_binary();
             std::string payload_str(reinterpret_cast<const char*>(payload.bytes), payload.size);
-            // payload_str = "r=AAECAwQFBgcICQoLDA0ODxAREhMUFRYACZ7oQAAtIoUGM8GV9GMDsZwtn0ugK6Ai,s=lQDVTrb70GO5Fc2J8CfK9w==,i=10000";
-            std::cout << "payload: " << payload_str << std::endl;
             if (i == 0) {
                 sscanf(payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
                 memcpy(first_payload, payload_str.c_str(), payload_str.size());
@@ -109,8 +107,6 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
             }
             if (output_v[0] == 0 && step > 3) {
                 memcpy(output_v, payload_str.c_str() + 2, payload_str.size() - 2);
-                //打印output_v
-                printf("output_v = %s\n", output_v);
             }
         }
 
@@ -164,8 +160,7 @@ int GenerateCredential1(std::string* auth_str) {
         sprintf(&hexOutput[i * 2], "%02x", result[i]);
     }
     hexOutput[MD5_DIGEST_LENGTH * 2] = '\0';  // 确保字符串以NULL结尾
-    char *hashed_password = NULL;
-    hashed_password = hexOutput;
+    char *hashed_password = hexOutput;
     // uint8_t outbuf[4096] = {0};
     std::string out_str;
     const char* user_name = "myUser";
@@ -173,7 +168,7 @@ int GenerateCredential1(std::string* auth_str) {
     out_str += user_name;
     out_str += ",r=";
     out_str += encoded_nonce;
-    authmsg.append(out_str.substr(3, out_str.size() - 3));
+    authmsg.append(out_str.substr(3));
     authmsg.append(",");
     LOG(INFO) << "authmsg: " << authmsg;
     authmsg.append(first_payload);
