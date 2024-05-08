@@ -249,6 +249,14 @@ cleanup:
 
 int base64_encode(const char* input, char* output, int input_length);
 
+static std::string HMAC_SHA1(const std::string& key, const std::string& data) {
+    unsigned int len = 0;
+    unsigned char digest[20];
+    HMAC(EVP_sha1(), key.c_str(), key.size(), (unsigned char*)data.c_str(), data.size(), digest, &len);
+    std::string result((char*)digest, len);
+    return result;
+}
+
 int GenerateCredential1(std::string* auth_str) {
     char tmp[] = "myUser:mongo:password123";
     unsigned char result[MD5_DIGEST_LENGTH];
@@ -335,15 +343,17 @@ int GenerateCredential1(std::string* auth_str) {
                           (int) strlen (MONGOC_SCRAM_CLIENT_KEY),
                           client_key, &key_len);
 
+    const std::string client_key_str = HMAC_SHA1(std::string((char*)salted_password, 20), MONGOC_SCRAM_CLIENT_KEY);
     /* StoredKey := H(client_key) */
     //数字打印client_key
     for (int i = 0; i < 20; i++) {
         printf("%d ", client_key[i]);
+        printf("%d ", client_key_str[i]);
     }
     printf("\n=====cli key========\n");
 
     crypto_openssl_sha1 (client_key, (size_t) 20, stored_key);
-    std::string stored_key_str = butil::SHA1HashString(std::string((char*)client_key, 20));
+    std::string stored_key_str = butil::SHA1HashString(client_key_str);
 
     //按数字打印stored_key
     for (int i = 0; i < 20; i++) {
