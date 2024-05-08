@@ -97,7 +97,9 @@ static bsoncxx::document::view GetView(const uint8_t* data, size_t length) {
 
 static std::string GetPayload(const uint8_t* data, size_t length) {
     bsoncxx::document::view view = GetView(data, length);
-    return view["payload"].get_string().value.to_string();
+    auto v = view["payload"].get_binary();
+    std::string ret((const char*)v.bytes, v.size);
+    return ret;
 }
 
 bool IsDone(const uint8_t* data, size_t length) {
@@ -111,6 +113,7 @@ int GetConversationId (const uint8_t* data, size_t length) {
 }
 
 int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
+    //first step
     char r[256], s[256];
     int i;
     std::string encoded_nonce;
@@ -159,9 +162,66 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return -1;
     }
+    first_payload_str = GetPayload((const uint8_t*)response.message().c_str(), response.message().size());
+    sscanf(first_payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
+    LOG(INFO) << "r: " << r << ", s: " << s << ", i: " << i;
+    conv_id = GetConversationId((const uint8_t*)response.message().c_str(), response.message().size());
 
+    //second step
+    char tmp[] = "myUser:mongo:password123";
+    unsigned char result[MD5_DIGEST_LENGTH];
+    MD5((unsigned char*)tmp, strlen(tmp), result);
 
+    char hexOutput[(MD5_DIGEST_LENGTH * 2) + 1];
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+        sprintf(&hexOutput[i * 2], "%02x", result[i]);
+    }
+    hexOutput[MD5_DIGEST_LENGTH * 2] = '\0';  // 确保字符串以NULL结尾
+    char *hashed_password = hexOutput;
+    std::string out_str;
+    const char* user_name = "myUser";
+    out_str = "n,,n=";
+    out_str.append(user_name).append(",r=").append(encoded_nonce);
+    authmsg.append(out_str.substr(3)).append(",").append(first_payload_str).append(",");
+    out_str = "c=biws,r=";
+    out_str.append(r);
+    authmsg.append(out_str);
+    out_str.append(",p=");
+    std::string decoded_salt;
+    butil::Base64Decode(s, &decoded_salt);
+    salted_password_str = SCRAM_salt_password(hashed_password, decoded_salt, i);
 
+    //generate proof
+    std::string client_proof;
+    client_proof.resize(20);
+
+    const std::string client_key_str = HMAC_SHA1(salted_password_str, MONGOC_SCRAM_CLIENT_KEY);
+
+    std::string stored_key_str = butil::SHA1HashString(client_key_str);
+    const std::string client_signature_str = HMAC_SHA1(stored_key_str, authmsg);
+
+    for (i = 0; i < 20; i++) {
+        client_proof[i] = client_key_str[i] ^ client_signature_str[i];
+    }
+    std::string proof_base64;
+    butil::Base64Encode(client_proof, &proof_base64);
+    out_str.append(proof_base64);
+
+    bsoncxx::builder::basic::document builder{};
+    builder.append(bsoncxx::builder::basic::kvp("saslContinue", 1));
+    builder.append(bsoncxx::builder::basic::kvp("conversationId", conv_id));
+    AppendBinary(builder, "payload", out_str);
+    v = builder.view();
+    request.set_message((char*)v.data(), v.length());
+    response.Clear();
+    cntl.Reset();
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+    const std::string second_payload_str = GetPayload((const uint8_t*)response.message().c_str(), response.message().size());
+    LOG(INFO) << "second_payload_str: " << second_payload_str;
 
     return 0;
 }
