@@ -331,20 +331,9 @@ int GenerateCredential1(std::string* auth_str) {
     std::string client_proof;
     client_proof.resize(20);
     uint8_t client_key[32];
-    int rr = 0;
-
-      /* ClientKey := HMAC(saltedPassword, "Client Key") */
-      //    HMAC (EVP_sha1 (), password, password_len, salt, salt_len, output, NULL);
     uint32_t key_len;
 
     const std::string client_key_str = HMAC_SHA1(std::string((char*)salted_password, 20), MONGOC_SCRAM_CLIENT_KEY);
-    /* StoredKey := H(client_key) */
-    //数字打印client_key
-    for (int i = 0; i < 20; i++) {
-        printf("%d ", client_key[i]);
-        printf("%d ", client_key_str[i]);
-    }
-    printf("\n=====cli key========\n");
 
     std::string stored_key_str = butil::SHA1HashString(client_key_str);
 
@@ -375,18 +364,7 @@ int GenerateCredential1(std::string* auth_str) {
 
     for (i = 0; i < 20; i++) {
         client_proof[i] = client_key_str[i] ^ client_signature_str[i];
-        //打印以上三个值 proof, client_key, client_signature
-        LOG(INFO) << "i: " << i << " client_proof[i]: " << (int)client_proof[i] << " client_key[i]: " << (int)client_key[i] << " client_signature[i]: " << (int)client_signature[i];
     }
-
-    //按数字打印client_proof
-    for (int i = 0; i < 20; i++) {
-        printf("%d ", client_proof[i]);
-    }
-    printf("\n====ivyjxj===\n");
-
-    LOG(INFO) << "ivyjxj client_proof: " << client_proof;
-    // rr = base64_encode ((const char*)client_proof, (char *) outbuf + outbuflen, 20);
     std::string proof_base64;
     butil::Base64Encode(client_proof, &proof_base64);
     LOG(INFO) << "ivyjxj proof_base64: " << proof_base64;
