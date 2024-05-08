@@ -80,6 +80,7 @@ std::string authmsg;
 uint32_t auth_max = 1024;
 char output_v[4096] = {0};
 int step = 0;
+std::string salted_password_str;
 
 #define MONGOC_SCRAM_SERVER_KEY "Server Key"
 #define MONGOC_SCRAM_CLIENT_KEY "Client Key"
@@ -180,7 +181,7 @@ int GenerateCredential1(std::string* auth_str) {
     out_str += ",p=";
     std::string decoded_salt;
     butil::Base64Decode(s, &decoded_salt);
-    const std::string salted_password_str = SCRAM_salt_password(hashed_password, decoded_salt, i);
+    salted_password_str = SCRAM_salt_password(hashed_password, decoded_salt, i);
 
     //generate proof
     std::string client_proof;
@@ -399,9 +400,10 @@ int VerifyServerSign() {
                           (uint8_t *) MONGOC_SCRAM_SERVER_KEY,
                           (int) key_len,
                           server_key, &out_len);
+    const std::string server_key_str = HMAC_SHA1(salted_password_str, MONGOC_SCRAM_SERVER_KEY);
     //authmsg hmac
     HMAC (EVP_sha1 (),
-                        (const unsigned char*)server_key,
+                        (const unsigned char*)server_key_str.c_str(),
                         20,
                         (const unsigned char*)authmsg.c_str(),
                         authmsg.size(),
