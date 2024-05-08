@@ -318,6 +318,9 @@ void PackMongoRequest(butil::IOBuf* req_buf,
                     const butil::IOBuf& request_body,
                     const Authenticator* auth) {
 
+    if (auth && auth->GenerateCredential(nullptr) != 0) {
+        return cntl->SetFailed(EREQUEST, "Fail to generate credential");
+    }
     ControllerPrivateAccessor accessor(cntl);
     accessor.get_sending_socket()->set_correlation_id(correlation_id);
     req_buf->append(request_body);

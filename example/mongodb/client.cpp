@@ -31,6 +31,7 @@
 #include <brpc/policy/couchbase_authenticator.h>
 #include "brpc/options.pb.h"
 #include "brpc/policy/mongo.pb.h"
+#include "brpc/policy/mongo_authenticator.h"
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/types.hpp>
 #include <bsoncxx/document/view.hpp>
@@ -354,11 +355,15 @@ int main(int argc, char* argv[]) {
     brpc::Channel channel;
     
     // Initialize the channel, NULL means using default options. 
+    const std::string uri_str = "mongodb://myUser:password123@localhost:7017/myDatabase";
+    assert(butil::need_auth_mongo(uri_str));
     brpc::ChannelOptions options;
     options.protocol = brpc::PROTOCOL_MONGO;
     options.connection_type = FLAGS_connection_type;
     options.timeout_ms = FLAGS_timeout_ms/*milliseconds*/;
     options.max_retry = FLAGS_max_retry;
+    brpc::policy::MongoAuthenticator auth(uri_str);
+    options.auth = &auth;
 
     if (channel.Init(FLAGS_server.c_str(), FLAGS_load_balancer.c_str(), &options) != 0) {
         LOG(ERROR) << "Fail to initialize channel";
@@ -387,23 +392,6 @@ int main(int argc, char* argv[]) {
     }
 
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
-    request.set_cursor_id(response.cursor_id());
-    request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
-    request.set_number_to_return(7);
-
-    cntl.Reset();
-    response.Clear();
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
-        return -1;
-    }
-
-    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
-    GenerateCredential(NULL);
-    GenerateCredential1(NULL);
-    VerifyServerSign();
-    LastAuthStep();
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
