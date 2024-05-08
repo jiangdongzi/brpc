@@ -16,7 +16,7 @@ struct MongoDBUri {
         database.swap(other.database);
         options.swap(other.options);
     }
-    bool need_auth() {
+    bool need_auth() const {
         return !username.empty() && !password.empty();
     }
 };

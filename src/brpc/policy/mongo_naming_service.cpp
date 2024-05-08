@@ -19,6 +19,7 @@
 #include <brpc/policy/redis_authenticator.h>
 #include "brpc/log.h"
 #include "brpc/policy/mongo.pb.h"
+#include "brpc/policy/mongo_authenticator.h"
 #include "bthread/bthread.h"
 #include <gflags/gflags.h>
 #include <brpc/channel.h>
@@ -26,6 +27,7 @@
 #include "butil/mongo_utils.h"
 #include <bsoncxx/document/view.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
+#include <memory>
 #include <netdb.h>  // gethostbyname_r
 #include <stdlib.h> // strtol
 #include <string>   // std::string
@@ -35,7 +37,21 @@ namespace policy {
 
 MongoNamingService::MongoNamingService() = default;
 
-static std::string GetIsMasterMsg (const butil::MongoDBUri& mongo_uri, const std::string& host, brpc::Channel& channel) {
+static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::string& host) {
+    brpc::Channel channel;
+    const butil::MongoDBUri mongo_uri = butil::parse_mongo_uri(mongo_uri_str);
+    
+    // Initialize the channel, NULL means using default options.
+    brpc::ChannelOptions options;
+
+    options.protocol = brpc::PROTOCOL_MONGO;
+    options.timeout_ms = 1000;
+    options.max_retry = 3;
+    if (mongo_uri.need_auth()) {
+        MongoAuthenticator* auth = new MongoAuthenticator(mongo_uri_str);
+        options.auth = auth;
+    }
+    std::unique_ptr<const Authenticator> auth_guard(options.auth);
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
@@ -61,22 +77,6 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
 
     const butil::MongoDBUri mongo_uri = butil::parse_mongo_uri(uri);
 
-    brpc::Channel channel;
-    
-    // Initialize the channel, NULL means using default options.
-    brpc::ChannelOptions options;
-    options.protocol = brpc::PROTOCOL_MONGO;
-    options.timeout_ms = 1000;
-    options.max_retry = 3;
-    if (!token.empty()) {
-        brpc::policy::RedisAuthenticator* auth = new brpc::policy::RedisAuthenticator(token);
-        options.auth = auth;
-    }
-    if (channel.Init(service_name.c_str(), &options) != 0) {
-        LOG(ERROR) << "Fail to initialize channel";
-        return -1;
-    }
-
     brpc::RedisRequest request;
     if (!request.AddCommand("CLUSTER SLOTS")) {
         LOG(ERROR) << "Fail to add command";
@@ -85,11 +85,11 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
 
     brpc::RedisResponse response;
     brpc::Controller cntl;
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access redis, " << cntl.ErrorText();
-        return -1;
-    }
+    // channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    // if (cntl.Failed()) {
+    //     LOG(ERROR) << "Fail to access redis, " << cntl.ErrorText();
+    //     return -1;
+    // }
     const auto& reply = response.reply(0);
     for (int i = 0; i < reply.size(); i++) {
         const auto& slot_start = reply[i][0];

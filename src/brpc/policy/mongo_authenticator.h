@@ -15,8 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef BRPC_POLICY_REDIS_AUTHENTICATOR_H
-#define BRPC_POLICY_REDIS_AUTHENTICATOR_H
+#pragma once
 
 #include "brpc/authenticator.h"
 #include "butil/mongo_utils.h"
@@ -43,5 +42,3 @@ private:
 
 }  // namespace policy
 }  // namespace brpc
-
-#endif  // BRPC_POLICY_COUCHBASE_AUTHENTICATOR_H
