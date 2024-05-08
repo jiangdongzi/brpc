@@ -172,9 +172,10 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     conv_id = GetConversationId((const uint8_t*)response.message().c_str(), response.message().size());
 
     //second step
-    char tmp[] = "myUser:mongo:password123";
+    // char tmp[] = "myUser:mongo:password123";
+    std::string tmp = user_name + ":mongo:" + password;
     unsigned char result[MD5_DIGEST_LENGTH];
-    MD5((unsigned char*)tmp, strlen(tmp), result);
+    MD5((unsigned char*)tmp.c_str(), tmp.size(), result);
 
     char hexOutput[(MD5_DIGEST_LENGTH * 2) + 1];
     for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
