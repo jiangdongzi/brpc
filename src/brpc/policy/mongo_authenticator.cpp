@@ -111,7 +111,6 @@ int GetConversationId (const uint8_t* data, size_t length) {
 
 int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     //first step
-    // butil::MongoDBUri uri = butil::parse_mongo_uri("mongodb://myUser:mongo:password123@localhost:7017/myDatabase?authMechanism=SCRAM-SHA-1");
     butil::MongoDBUri uri = butil::parse_mongo_uri(*auth_str);
     const std::string& user_name = uri.username;
     const std::string& password = uri.password;
@@ -128,7 +127,6 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
 
     std::string client_nonce = generate_client_nonce();
     butil::Base64Encode(client_nonce, &encoded_nonce);
-    // std::string first_message = "n,,n=myUser,r=" + encoded_nonce;
     std::string first_message = "n,,n=" + user_name + ",r=" + encoded_nonce;
 
     bsoncxx::builder::basic::document command;
@@ -138,7 +136,6 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
 
     bsoncxx::document::view_or_value view = command.view();
-    // std::string fullCollectionName = "myDatabase.$cmd";
     std::string fullCollectionName = database + ".$cmd";
 
     brpc::policy::MongoRequest request;
@@ -172,7 +169,6 @@ int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
     conv_id = GetConversationId((const uint8_t*)response.message().c_str(), response.message().size());
 
     //second step
-    // char tmp[] = "myUser:mongo:password123";
     std::string tmp = user_name + ":mongo:" + password;
     unsigned char result[MD5_DIGEST_LENGTH];
     MD5((unsigned char*)tmp.c_str(), tmp.size(), result);
