@@ -24,7 +24,8 @@
 #include <brpc/channel.h>
 #include <brpc/redis.h>
 #include "butil/mongo_utils.h"
-#include "output/include/brpc/options.pb.h"
+#include <bsoncxx/document/view.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
 #include <netdb.h>  // gethostbyname_r
 #include <stdlib.h> // strtol
 #include <string>   // std::string
@@ -34,11 +35,25 @@ namespace policy {
 
 MongoNamingService::MongoNamingService() = default;
 
-static void AddServers (const butil::MongoDBUri& mongo_uri, std::vector<ServerNode>* servers, const int host_idx, brpc::Channel& channel) {
+static std::string GetIsMasterMsg (const butil::MongoDBUri& mongo_uri, const std::string& host, brpc::Channel& channel) {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
+    request.set_full_collection_name(host + ".$cmd");
+    request.set_number_to_return(1);
+    bsoncxx::builder::basic::document document{};
+    document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
+    auto v = document.view();
+    request.set_message((char*)v.data(), v.length());
+    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return "";
+    }
+    LOG(INFO) << "response_flags: " << response.response_flags();
+    return response.message();
 }
 
 int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *servers) {
