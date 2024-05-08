@@ -159,14 +159,8 @@ int GenerateCredential1(std::string* auth_str) {
     std::string out_str;
     const char* user_name = "myUser";
     out_str = "n,,n=";
-    out_str.append(user_name);
-    out_str.append(",r=");
-    out_str.append(encoded_nonce);
-    authmsg.append(out_str.substr(3));
-    authmsg.append(",");
-    LOG(INFO) << "authmsg: " << authmsg;
-    authmsg.append(first_payload_str);
-    authmsg.append(",");
+    out_str.append(user_name).append(",r=").append(encoded_nonce);
+    authmsg.append(out_str.substr(3)).append(",").append(first_payload_str).append(",");
     out_str = "c=biws,r=";
     out_str.append(r);
     authmsg.append(out_str);
