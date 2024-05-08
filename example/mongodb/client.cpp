@@ -122,38 +122,6 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
     }
 }
 
-int base64_decode(const char *base64_input, char *outbuf, size_t outbuf_size) {
-    BIO *b64, *bio;
-    int total = 0, inlen;  // total 用来记录总共读取的字节数
-
-    // 创建一个用于 Base64 解码的 BIO
-    b64 = BIO_new(BIO_f_base64());
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // 设置不使用换行符
-
-    // 创建一个内存 BIO，从 base64_input 读取数据
-    bio = BIO_new_mem_buf((void*)base64_input, -1);  // -1 表示自动计算长度
-    bio = BIO_push(b64, bio);
-
-    // 循环读取数据进行解码
-    while ((inlen = BIO_read(bio, outbuf + total, outbuf_size - total)) > 0) {
-        total += inlen;
-        if (total >= outbuf_size) break;  // 防止缓冲区溢出
-    }
-
-    // 确保输出是 null-terminated，防止溢出
-    if (total < outbuf_size) {
-        outbuf[total] = '\0';
-    } else {
-        outbuf[outbuf_size - 1] = '\0';
-    }
-
-    // 清理 BIO
-    BIO_free_all(bio);
-
-    // 返回实际写入的字节数，不包括最后的 null-terminator
-    return total;
-}
-
 static std::string generate_client_nonce() {
     std::string nonce;
     nonce.resize(24);
@@ -165,96 +133,28 @@ static std::string generate_client_nonce() {
     return nonce;
 }
 
-static bool
-scram_buf_write (const char *src, int32_t src_len, uint8_t *outbuf, uint32_t outbufmax, uint32_t *outbuflen)
-{
-   if (src_len < 0) {
-      src_len = (int32_t) strlen (src);
-   }
-
-   if (*outbuflen + src_len >= outbufmax) {
-      return false;
-   }
-
-   memcpy (outbuf + *outbuflen, src, src_len);
-
-   *outbuflen += src_len;
-
-   return true;
-}
-
-/* Compute the SCRAM step Hi() as defined in RFC5802 */
-static void
-scram_salt_password (uint8_t *output,
-                             const char *password,
-                             uint32_t password_len,
-                             const uint8_t *salt,
-                             uint32_t salt_len,
-                             uint32_t iterations)
-{
-   uint8_t intermediate_digest[32];
-   uint8_t start_key[32];
-
-   memcpy (start_key, salt, salt_len);
-
-   start_key[salt_len] = 0;
-   start_key[salt_len + 1] = 0;
-   start_key[salt_len + 2] = 0;
-   start_key[salt_len + 3] = 1;
-
-//    mongoc_crypto_hmac (&scram->crypto, password, password_len, start_key, 20, output);
-   HMAC (EVP_sha1 (), password, password_len, start_key, 20, output, NULL);
-
-   memcpy (intermediate_digest, output, 20);
-
-   /* intermediateDigest contains Ui and output contains the accumulated XOR:ed
-    * result */
-   for (uint32_t i = 2u; i <= iterations; i++) {
-        const int hash_size = 20;
-
-    //   mongoc_crypto_hmac (&scram->crypto, password, password_len, intermediate_digest, hash_size, intermediate_digest);
-        HMAC (EVP_sha1 (), password, password_len, intermediate_digest, hash_size, intermediate_digest, NULL);
-
-        for (int k = 0; k < hash_size; k++) {
-            output[k] ^= intermediate_digest[k];
-        }
-   }
-}
-
-bool
-crypto_openssl_sha1 (
-                            const unsigned char *input,
-                            const size_t input_len,
-                            unsigned char *hash_out)
-{
-   EVP_MD_CTX *digest_ctxp = EVP_MD_CTX_new ();
-   bool rval = false;
-
-
-   if (1 != EVP_DigestInit_ex (digest_ctxp, EVP_sha1 (), NULL)) {
-      goto cleanup;
-   }
-
-   if (1 != EVP_DigestUpdate (digest_ctxp, input, input_len)) {
-      goto cleanup;
-   }
-
-   rval = (1 == EVP_DigestFinal_ex (digest_ctxp, hash_out, NULL));
-
-cleanup:
-   EVP_MD_CTX_free (digest_ctxp);
-
-   return rval;
-}
-
-int base64_encode(const char* input, char* output, int input_length);
-
 static std::string HMAC_SHA1(const std::string& key, const std::string& data) {
     unsigned int len = 0;
     unsigned char digest[20];
     HMAC(EVP_sha1(), key.c_str(), key.size(), (unsigned char*)data.c_str(), data.size(), digest, &len);
     std::string result((char*)digest, len);
     return result;
+}
+
+std::string SCRAM_salt_password(const std::string& password,
+                                 const std::string& salt,
+                                 int iterations) {
+    std::string start_key = salt + std::string("\x00\x00\x00\x01", 4);
+    std::string intermediate_digest;
+    intermediate_digest.resize(20);
+    std::string output = intermediate_digest = HMAC_SHA1(password, start_key);
+    for (int i = 2; i <= iterations; i++) {
+        intermediate_digest = HMAC_SHA1(password, intermediate_digest);
+        for (int k = 0; k < 20; k++) {
+            output[k] ^= intermediate_digest[k];
+        }
+    }
+    return output;
 }
 
 int GenerateCredential1(std::string* auth_str) {
@@ -269,7 +169,6 @@ int GenerateCredential1(std::string* auth_str) {
     hexOutput[MD5_DIGEST_LENGTH * 2] = '\0';  // 确保字符串以NULL结尾
     char *hashed_password = NULL;
     hashed_password = hexOutput;
-    printf("MD5 digest: %s\n", hexOutput);
     // uint8_t outbuf[4096] = {0};
     std::string out_str;
     const char* user_name = "myUser";
@@ -289,13 +188,13 @@ int GenerateCredential1(std::string* auth_str) {
     out_str += ",p=";
     std::string decoded_salt;
     butil::Base64Decode(s, &decoded_salt);
-    scram_salt_password (salted_password, hashed_password, strlen(hashed_password), (uint8_t *) decoded_salt.c_str(), decoded_salt.size(), i);
+    const std::string salted_password_str = SCRAM_salt_password(hashed_password, decoded_salt, i);
 
     //generate proof
     std::string client_proof;
     client_proof.resize(20);
 
-    const std::string client_key_str = HMAC_SHA1(std::string((char*)salted_password, 20), MONGOC_SCRAM_CLIENT_KEY);
+    const std::string client_key_str = HMAC_SHA1(salted_password_str, MONGOC_SCRAM_CLIENT_KEY);
 
     std::string stored_key_str = butil::SHA1HashString(client_key_str);
     const std::string client_signature_str = HMAC_SHA1(stored_key_str, authmsg);
@@ -307,23 +206,19 @@ int GenerateCredential1(std::string* auth_str) {
     butil::Base64Encode(client_proof, &proof_base64);
     out_str += proof_base64;
 
-    LOG(INFO) << "out_str: " << out_str;
+    bsoncxx::builder::stream::document builder{};
 
-        bsoncxx::builder::stream::document builder{};
-
-        // Append the command fields
-        builder << "saslContinue" << 1
-                << "conversationId" << conv_id
-                << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, (uint32_t)out_str.size(), (uint8_t*)out_str.c_str()};
-        auto v = builder.view();
-    // char fullnName[256];
-    // snprintf(fullnName, sizeof(fullnName), "%s.%s", "myDatabase", "$cmd");
+    // Append the command fields
+    builder << "saslContinue" << 1
+            << "conversationId" << conv_id
+            << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, (uint32_t)out_str.size(), (uint8_t*)out_str.c_str()};
+    auto v = builder.view();
     char fullCollectionName[] = "myDatabase.$cmd"; // Ensure null-terminated string
 
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-        brpc::Channel channel;
+    brpc::Channel channel;
     
     // Initialize the channel, NULL means using default options. 
     brpc::ChannelOptions options;
