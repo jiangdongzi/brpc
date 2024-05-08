@@ -336,12 +336,6 @@ int GenerateCredential1(std::string* auth_str) {
       /* ClientKey := HMAC(saltedPassword, "Client Key") */
       //    HMAC (EVP_sha1 (), password, password_len, salt, salt_len, output, NULL);
     uint32_t key_len;
-    HMAC (EVP_sha1 (),
-                          salted_password,
-                          20,
-                          (uint8_t *) MONGOC_SCRAM_CLIENT_KEY,
-                          (int) strlen (MONGOC_SCRAM_CLIENT_KEY),
-                          client_key, &key_len);
 
     const std::string client_key_str = HMAC_SHA1(std::string((char*)salted_password, 20), MONGOC_SCRAM_CLIENT_KEY);
     /* StoredKey := H(client_key) */
@@ -379,7 +373,7 @@ int GenerateCredential1(std::string* auth_str) {
     printf("\n-------\n");
 
     for (i = 0; i < 20; i++) {
-        client_proof[i] = client_key[i] ^ client_signature[i];
+        client_proof[i] = client_key_str[i] ^ client_signature[i];
         //打印以上三个值 proof, client_key, client_signature
         LOG(INFO) << "i: " << i << " client_proof[i]: " << (int)client_proof[i] << " client_key[i]: " << (int)client_key[i] << " client_signature[i]: " << (int)client_signature[i];
     }
