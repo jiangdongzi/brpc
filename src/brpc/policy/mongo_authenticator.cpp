@@ -87,20 +87,27 @@ static void AppendBinary(bsoncxx::builder::basic::document& builder,
 #define MONGOC_SCRAM_SERVER_KEY "Server Key"
 #define MONGOC_SCRAM_CLIENT_KEY "Client Key"
 
-static std::string GetPayload(const uint8_t* data, size_t length) {
+static bsoncxx::document::view GetView(const uint8_t* data, size_t length) {
     // 文档长度存储在前四个字节
     uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data);
     bsoncxx::document::view view(data, doc_length);
     LOG(INFO) << bsoncxx::to_json(view);
+    return view;
+}
+
+static std::string GetPayload(const uint8_t* data, size_t length) {
+    bsoncxx::document::view view = GetView(data, length);
     return view["payload"].get_string().value.to_string();
 }
 
 bool IsDone(const uint8_t* data, size_t length) {
-    // 文档长度存储在前四个字节
-    uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data);
-    bsoncxx::document::view view(data, doc_length);
-    LOG(INFO) << bsoncxx::to_json(view);
+    bsoncxx::document::view view = GetView(data, length);
     return view["done"].get_bool().value;
+}
+
+int GetConversationId (const uint8_t* data, size_t length) {
+    bsoncxx::document::view view = GetView(data, length);
+    return view["conversationId"].get_int32().value;
 }
 
 int MongoAuthenticator::GenerateCredential(std::string* auth_str) const {
