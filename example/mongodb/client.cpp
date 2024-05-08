@@ -68,7 +68,6 @@ butil::static_atomic<int> g_sender_count = BUTIL_STATIC_ATOMIC_INIT(0);
 
 static char r[256], s[256];
 static int i;
-char client_nonce[24];
 std::string encoded_nonce;
 std::string first_payload_str;
 int conv_id;
@@ -145,6 +144,16 @@ std::string SCRAM_salt_password(const std::string& password,
     return output;
 }
 
+static void AppendBinary(bsoncxx::builder::basic::document& builder,
+                         const std::string& key,
+                         const std::string& value) {
+    builder.append(bsoncxx::builder::basic::kvp(key, bsoncxx::types::b_binary{
+        bsoncxx::binary_sub_type::k_binary,
+        (uint32_t)value.size(),
+        reinterpret_cast<const uint8_t*>(value.c_str())
+    }));
+}
+
 int GenerateCredential1(std::string* auth_str) {
     char tmp[] = "myUser:mongo:password123";
     unsigned char result[MD5_DIGEST_LENGTH];
@@ -185,12 +194,11 @@ int GenerateCredential1(std::string* auth_str) {
     butil::Base64Encode(client_proof, &proof_base64);
     out_str.append(proof_base64);
 
-    bsoncxx::builder::stream::document builder{};
+    bsoncxx::builder::basic::document builder{};
+    builder.append(bsoncxx::builder::basic::kvp("saslContinue", 1));
+    builder.append(bsoncxx::builder::basic::kvp("conversationId", conv_id));
+    AppendBinary(builder, "payload", out_str);
 
-    // Append the command fields
-    builder << "saslContinue" << 1
-            << "conversationId" << conv_id
-            << "payload" << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, (uint32_t)out_str.size(), (uint8_t*)out_str.c_str()};
     auto v = builder.view();
     std::string fullCollectionName = "myDatabase.$cmd"; // Ensure null-terminated string
 
@@ -223,16 +231,6 @@ int GenerateCredential1(std::string* auth_str) {
     return 0;
 
 
-}
-
-static void AppendBinary(bsoncxx::builder::basic::document& builder,
-                         const std::string& key,
-                         const std::string& value) {
-    builder.append(bsoncxx::builder::basic::kvp(key, bsoncxx::types::b_binary{
-        bsoncxx::binary_sub_type::k_binary,
-        (uint32_t)value.size(),
-        reinterpret_cast<const uint8_t*>(value.c_str())
-    }));
 }
 
 int GenerateCredential(std::string* auth_str) {
