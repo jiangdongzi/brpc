@@ -387,17 +387,13 @@ int LastAuthStep() {
 }
 
 int VerifyServerSign() {
-
-    char encoded_server_signature[64];
-    int32_t encoded_server_signature_len;
     const std::string server_key_str = HMAC_SHA1(salted_password_str, MONGOC_SCRAM_SERVER_KEY);
     //authmsg hmac
     const std::string server_signature_str = HMAC_SHA1(server_key_str, authmsg);
-    //base64 endcode server_signature
-    encoded_server_signature_len = base64_encode ((const char*)server_signature_str.c_str(), encoded_server_signature, 20);
-    printf ("encoded_server_signature = %s\n", encoded_server_signature);
+    std::string encoded_server_signature_str;
+    butil::Base64Encode(server_signature_str, &encoded_server_signature_str);
     //compare encoded_server_signature and output_v, need care length
-    if (strncmp (encoded_server_signature, output_v, encoded_server_signature_len) != 0) {
+    if (encoded_server_signature_str != std::string(output_v, encoded_server_signature_str.size())) {
         printf ("server signature is not equal\n");
     } else {
         printf ("server signature is equal\n");
