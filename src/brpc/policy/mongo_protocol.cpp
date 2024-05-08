@@ -308,6 +308,7 @@ static void TestMongoGenerator() {
     MongoAuthenticator auth;
     std::string uri = "mongodb://myUser:mongo:password123@localhost:7017/myDatabase";
     auth.GenerateCredential(&uri);
+}
 
 void PackMongoRequest(butil::IOBuf* req_buf,
                     SocketMessage**,
