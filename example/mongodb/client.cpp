@@ -79,6 +79,7 @@ uint8_t salted_password[32];
 std::string authmsg;
 uint32_t auth_max = 1024;
 char output_v[4096] = {0};
+std::string output_v_str;
 int step = 0;
 std::string salted_password_str;
 
@@ -106,8 +107,9 @@ void parse_continuous_bson_data(const uint8_t* data, size_t length) {
                 first_payload_len = payload_str.size();
                 conv_id = view["conversationId"].get_int32();
             }
-            if (output_v[0] == 0 && step > 3) {
+            if (output_v_str.empty() && step > 3) {
                 memcpy(output_v, payload_str.c_str() + 2, payload_str.size() - 2);
+                output_v_str = payload_str.substr(2);
             }
         }
 
@@ -393,7 +395,7 @@ int VerifyServerSign() {
     std::string encoded_server_signature_str;
     butil::Base64Encode(server_signature_str, &encoded_server_signature_str);
     //compare encoded_server_signature and output_v, need care length
-    if (encoded_server_signature_str != std::string(output_v, encoded_server_signature_str.size())) {
+    if (encoded_server_signature_str != output_v_str) {
         printf ("server signature is not equal\n");
     } else {
         printf ("server signature is equal\n");
