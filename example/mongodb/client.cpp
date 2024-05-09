@@ -130,7 +130,20 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());    
+    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+
+//get more
+    request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
+    request.set_cursor_id(response.cursor_id());
+    cntl.Reset();
+    response.Clear();
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+
+    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
