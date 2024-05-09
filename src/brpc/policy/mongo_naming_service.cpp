@@ -59,6 +59,10 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
         options.auth = auth;
     }
     std::unique_ptr<const Authenticator> auth_guard(options.auth);
+    if (channel.Init(host.c_str(), &options) != 0) {
+        LOG(ERROR) << "Fail to initialize channel";
+        return "";
+    }
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
