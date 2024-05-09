@@ -67,7 +67,7 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
-    request.set_full_collection_name(host + ".$cmd");
+    request.set_full_collection_name(mongo_uri.database + ".$cmd");
     request.set_number_to_return(1);
     bsoncxx::builder::basic::document document{};
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
