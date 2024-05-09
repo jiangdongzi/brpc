@@ -1,6 +1,8 @@
 #include "mongo_utils.h"
 #include <sstream>
 
+namespace butil {
+
 static void parse_options(const std::string& options_string, std::unordered_map<std::string, std::string>& options_map) {
     std::istringstream options_stream(options_string);
     std::string option;
@@ -16,18 +18,16 @@ static void parse_options(const std::string& options_string, std::unordered_map<
     }
 }
 
-namespace butil {
-
 MongoDBUri parse_mongo_uri(const std::string& uri) {
     MongoDBUri result;
-    size_t protocol_end = uri.find("://");
+
     size_t at_sign = uri.rfind('@');
-    size_t first_slash = uri.find('/', protocol_end + 3);
+    size_t first_slash = uri.find('/');
     size_t question_mark = uri.find('?');
 
     // Extract username and password
-    if (protocol_end != std::string::npos && at_sign != std::string::npos) {
-        std::string userinfo = uri.substr(protocol_end + 3, at_sign - protocol_end - 3);
+    if (at_sign != std::string::npos) {
+        std::string userinfo = uri.substr(0, at_sign);
         size_t colon = userinfo.find(':');
         if (colon != std::string::npos) {
             result.username = userinfo.substr(0, colon);
@@ -38,7 +38,7 @@ MongoDBUri parse_mongo_uri(const std::string& uri) {
     }
 
     // Extract hosts
-    size_t host_start = at_sign != std::string::npos ? at_sign + 1 : protocol_end + 3;
+    size_t host_start = at_sign != std::string::npos ? at_sign + 1 : 0;
     size_t host_end = first_slash != std::string::npos ? first_slash : (question_mark != std::string::npos ? question_mark : uri.length());
     std::string host_list = uri.substr(host_start, host_end - host_start);
     std::istringstream host_stream(host_list);
