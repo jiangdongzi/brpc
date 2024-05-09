@@ -153,10 +153,12 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
         // 创建 BSON 视图
         bsoncxx::document::view view(data, doc_length);
         auto v = view["ismaster"];
+        butil::EndPoint point;
+        str2endpoint(host.c_str(), &point);
         if (v.type() == bsoncxx::type::k_bool && v.get_bool().value) {
-            servers->emplace_back(host, "master");
+            servers->emplace_back(point, "master");
         } else {
-            servers->emplace_back(host, "slave");
+            servers->emplace_back(point, "slave");
         }
         auto it = view.find("hosts");
         if (it != view.end()) {
