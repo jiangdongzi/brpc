@@ -47,7 +47,7 @@ bool MasterSlaveLoadBalancer::Add(Servers& bg, const ServerId& id) {
     } else if (id.tag == SLAVE) {
         bg.slave_server_list.push_back(id);
         std::sort(bg.slave_server_list.begin(), bg.slave_server_list.end());
-        bg.server_map[id] = -bg.slave_server_list.size();
+        bg.server_map[id] = bg.slave_server_list.size();
     } else {
         return false;
     }
@@ -58,13 +58,13 @@ bool MasterSlaveLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     std::map<ServerId, size_t>::iterator it = bg.server_map.find(id);
     if (it != bg.server_map.end()) {
         size_t index = it->second;
-        if (index > 0) {
+        if (id.tag == MASTER) {
             bg.master_server_list[index] = bg.master_server_list.back();
             bg.server_map[bg.master_server_list[index]] = index;
             bg.master_server_list.pop_back();
         } else {
-            bg.slave_server_list[-index] = bg.slave_server_list.back();
-            bg.server_map[bg.slave_server_list[-index]] = index;
+            bg.slave_server_list[index] = bg.slave_server_list.back();
+            bg.server_map[bg.slave_server_list[index]] = index;
             bg.slave_server_list.pop_back();
         }
         bg.server_map.erase(it);
