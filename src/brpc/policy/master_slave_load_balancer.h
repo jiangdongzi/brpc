@@ -18,7 +18,6 @@
 #pragma once
 
 #include <vector>                                      // std::vector
-#include <map>                                         // std::map
 #include "butil/containers/doubly_buffered_data.h"
 #include "brpc/load_balancer.h"
 #include "brpc/cluster_recover_policy.h"
@@ -41,7 +40,6 @@ private:
     struct Servers {
         std::vector<ServerId> master_server_list;
         std::vector<ServerId> slave_server_list;
-        std::map<ServerId, size_t> server_map;
     };
     static bool Add(Servers& bg, const ServerId& id);
     static bool Remove(Servers& bg, const ServerId& id);

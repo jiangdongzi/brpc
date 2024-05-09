@@ -16,6 +16,7 @@
 // under the License.
 
 
+#include "brpc/server_id.h"
 #include "butil/macros.h"
 #include "butil/fast_rand.h"
 #include "brpc/socket.h"
@@ -35,42 +36,38 @@ inline uint32_t GenRandomStride() {
     return prime_offset[butil::fast_rand_less_than(ARRAY_SIZE(prime_offset))];
 }
 
+static void AddSortAndUnique(std::vector<ServerId>& vec, const ServerId& id) {
+    vec.push_back(id);
+    std::sort(vec.begin(), vec.end());
+    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+}
+
 bool MasterSlaveLoadBalancer::Add(Servers& bg, const ServerId& id) {
-    std::map<ServerId, size_t>::iterator it = bg.server_map.find(id);
-    if (it != bg.server_map.end()) {
+    if (id.tag != MASTER && id.tag != SLAVE) {
+        LOG(INFO) << "Invalid tag: " << id.tag;
         return false;
     }
     if (id.tag == MASTER) {
-        bg.master_server_list.push_back(id);
-        std::sort(bg.master_server_list.begin(), bg.master_server_list.end());
-        bg.server_map[id] = bg.master_server_list.size();
-    } else if (id.tag == SLAVE) {
-        bg.slave_server_list.push_back(id);
-        std::sort(bg.slave_server_list.begin(), bg.slave_server_list.end());
-        bg.server_map[id] = bg.slave_server_list.size();
+        AddSortAndUnique(bg.master_server_list, id);
     } else {
-        return false;
+        AddSortAndUnique(bg.slave_server_list, id);
     }
     return true;
 }
 
 bool MasterSlaveLoadBalancer::Remove(Servers& bg, const ServerId& id) {
-    std::map<ServerId, size_t>::iterator it = bg.server_map.find(id);
-    if (it != bg.server_map.end()) {
-        size_t index = it->second;
         if (id.tag == MASTER) {
-            bg.master_server_list[index] = bg.master_server_list.back();
-            bg.server_map[bg.master_server_list[index]] = index;
-            bg.master_server_list.pop_back();
+            bg.master_server_list.erase(
+                std::remove(bg.master_server_list.begin(),
+                            bg.master_server_list.end(), id),
+                bg.master_server_list.end());
         } else {
-            bg.slave_server_list[index] = bg.slave_server_list.back();
-            bg.server_map[bg.slave_server_list[index]] = index;
-            bg.slave_server_list.pop_back();
+            bg.slave_server_list.erase(
+                std::remove(bg.slave_server_list.begin(),
+                            bg.slave_server_list.end(), id),
+                bg.slave_server_list.end());
         }
-        bg.server_map.erase(it);
         return true;
-    }
-    return false;
 }
 
 size_t MasterSlaveLoadBalancer::BatchAdd(
