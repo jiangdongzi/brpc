@@ -56,22 +56,22 @@ DEFINE_int32(batch, 1, "Pipelined Operations");
 
 
 void parse_continuous_bson_data(const uint8_t* data, size_t length) {
-    // 假设文档长度存储在前四个字节
-    uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data);
-    // 创建 BSON 视图
-    bsoncxx::document::view view(data, doc_length);
-    // 将 BSON 转换为 JSON 并输出
-    std::cout << bsoncxx::to_json(view) << std::endl;
-    auto v = view["ismaster"];
-    bool is_master = v.get_bool();
-    auto it = view.find("hosts");
-    if (it != view.end()) {
-        auto hosts = it->get_array().value;
-        for (auto host : hosts) {
-            LOG(INFO) << host.get_string().value.to_string();
-        }
+    size_t offset = 0;
+    while (offset < length) {
+        // 假设文档长度存储在前四个字节
+        uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data + offset);
+
+        // 创建 BSON 视图
+        bsoncxx::document::view view(data + offset, doc_length);
+        
+        // 将 BSON 转换为 JSON 并输出
+        std::cout << bsoncxx::to_json(view) << std::endl;
+        
+        // 移动偏移量到下一个文档的起始位置
+        offset += doc_length;
     }
 }
+
 
 int main(int argc, char* argv[]) {
     // Parse gflags. We recommend you to use gflags as well.
@@ -117,6 +117,20 @@ int main(int argc, char* argv[]) {
     }
 
     parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+    request.set_full_collection_name("myDatabase.test");
+    cntl.Reset();
+    response.Clear();
+    document.clear();
+    v = document.view();
+    request.set_message((char*)v.data(), v.length());
+    request.set_number_to_return(3);
+    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        return -1;
+    }
+
+    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());    
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
