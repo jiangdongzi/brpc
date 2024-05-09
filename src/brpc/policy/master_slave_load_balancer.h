@@ -26,9 +26,6 @@
 namespace brpc {
 namespace policy {
 
-// This LoadBalancer selects servers randomly using a thread-specific random
-// number. Selected numbers of servers(added at the same time) are less close
-// than RoundRobinLoadBalancer.
 class MasterSlaveLoadBalancer : public LoadBalancer {
 public:
     bool AddServer(const ServerId& id);
@@ -46,14 +43,12 @@ private:
         std::vector<ServerId> slave_server_list;
         std::map<ServerId, size_t> server_map;
     };
-    // bool SetParameters(const butil::StringPiece& params);
     static bool Add(Servers& bg, const ServerId& id);
     static bool Remove(Servers& bg, const ServerId& id);
     static size_t BatchAdd(Servers& bg, const std::vector<ServerId>& servers);
     static size_t BatchRemove(Servers& bg, const std::vector<ServerId>& servers);
 
     butil::DoublyBufferedData<Servers> _db_servers;
-    // std::shared_ptr<ClusterRecoverPolicy> _cluster_recover_policy;
 };
 
 }  // namespace policy

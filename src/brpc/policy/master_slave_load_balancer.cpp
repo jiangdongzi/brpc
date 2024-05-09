@@ -20,7 +20,6 @@
 #include "butil/fast_rand.h"
 #include "brpc/socket.h"
 #include "brpc/policy/master_slave_load_balancer.h"
-#include "butil/strings/string_number_conversions.h"
 
 namespace brpc {
 namespace policy {
@@ -59,9 +58,6 @@ bool MasterSlaveLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     std::map<ServerId, size_t>::iterator it = bg.server_map.find(id);
     if (it != bg.server_map.end()) {
         size_t index = it->second;
-        // bg.server_list[index] = bg.server_list.back();
-        // bg.server_map[bg.server_list[index]] = index;
-        // bg.server_list.pop_back();
         if (index > 0) {
             bg.master_server_list[index] = bg.master_server_list.back();
             bg.server_map[bg.master_server_list[index]] = index;
@@ -123,22 +119,21 @@ size_t MasterSlaveLoadBalancer::RemoveServersInBatch(
 
 int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
     butil::DoublyBufferedData<Servers>::ScopedPtr s;
+    if (!in.has_request_code) {
+        LOG(ERROR) << "Controller.set_request_code() is required";
+        return EINVAL;
+    }
     if (_db_servers.Read(&s) != 0) {
         return ENOMEM;
     }
-    size_t n = s->server_list.size();
+    size_t n = s->master_server_list.size() + s->slave_server_list.size();
     if (n == 0) {
         return ENODATA;
     }
-    // if (_cluster_recover_policy && _cluster_recover_policy->StopRecoverIfNecessary()) {
-    //     if (_cluster_recover_policy->DoReject(s->server_list)) {
-    //         return EREJECT;
-    //     }
-    // }
     uint32_t stride = 0;
-    size_t offset = butil::fast_rand_less_than(n);
+    size_t offset = in.request_code % s->master_server_list.size();
     for (size_t i = 0; i < n; ++i) {
-        const SocketId id = s->server_list[offset].id;
+        const SocketId id = s->master_server_list[offset].id;
         if (((i + 1) == n  // always take last chance
              || !ExcludedServers::IsExcluded(in.excluded, id))
             && Socket::Address(id, out->ptr) == 0
@@ -153,21 +148,12 @@ int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
         // this failed server won't be visited again inside for
         offset = (offset + stride) % n;
     }
-    // if (_cluster_recover_policy) {
-    //     _cluster_recover_policy->StartRecover();
-    // }
-    // After we traversed the whole server list, there is still no
-    // available server
     return EHOSTDOWN;
 }
 
 MasterSlaveLoadBalancer* MasterSlaveLoadBalancer::New(
     const butil::StringPiece& params) const {
     MasterSlaveLoadBalancer* lb = new (std::nothrow) MasterSlaveLoadBalancer;
-    // if (lb && !lb->SetParameters(params)) {
-    //     delete lb;
-    //     lb = NULL;
-    // }
     return lb;
 }
 
@@ -186,10 +172,6 @@ void MasterSlaveLoadBalancer::Describe(
     if (_db_servers.Read(&s) != 0) {
         os << "fail to read _db_servers";
     } else {
-        // os << "n=" << s->server_list.size() << ':';
-        // for (size_t i = 0; i < s->server_list.size(); ++i) {
-        //     os << ' ' << s->server_list[i];
-        // }
         os << "master_server_list={";
         for (size_t i = 0; i < s->master_server_list.size(); ++i) {
             os << ' ' << s->master_server_list[i];
@@ -201,10 +183,6 @@ void MasterSlaveLoadBalancer::Describe(
     }
     os << '}';
 }
-
-// bool RandomizedLoadBalancer::SetParameters(const butil::StringPiece& params) {
-//     return GetRecoverPolicyByParams(params, &_cluster_recover_policy);
-// }
 
 }  // namespace policy
 } // namespace brpc
