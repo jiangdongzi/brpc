@@ -39,6 +39,7 @@
 #include "brpc/policy/consul_naming_service.h"
 #include "brpc/policy/discovery_naming_service.h"
 #include "brpc/policy/nacos_naming_service.h"
+#include "brpc/policy/mongo_naming_service.h"
 
 // Load Balancers
 #include "brpc/policy/round_robin_load_balancer.h"
@@ -49,6 +50,7 @@
 #include "brpc/policy/consistent_hashing_load_balancer.h"
 #include "brpc/policy/hasher.h"
 #include "brpc/policy/dynpart_load_balancer.h"
+#include "brpc/policy/master_slave_load_balancer.h"
 
 
 // Span
@@ -143,6 +145,7 @@ struct GlobalExtensions {
     ConsulNamingService cns;
     DiscoveryNamingService dcns;
     NacosNamingService nns;
+    MongoNamingService mns;
 
     RoundRobinLoadBalancer rr_lb;
     WeightedRoundRobinLoadBalancer wrr_lb;
@@ -153,6 +156,7 @@ struct GlobalExtensions {
     ConsistentHashingLoadBalancer ch_md5_lb;
     ConsistentHashingLoadBalancer ch_ketama_lb;
     DynPartLoadBalancer dynpart_lb;
+    MasterSlaveLoadBalancer ms_lb;
 
     AutoConcurrencyLimiter auto_cl;
     ConstantConcurrencyLimiter constant_cl;
@@ -375,6 +379,7 @@ static void GlobalInitializeOrDieImpl() {
     NamingServiceExtension()->RegisterOrDie("consul", &g_ext->cns);
     NamingServiceExtension()->RegisterOrDie("discovery", &g_ext->dcns);
     NamingServiceExtension()->RegisterOrDie("nacos", &g_ext->nns);
+    NamingServiceExtension()->RegisterOrDie("mongodb", &g_ext->mns);
 
     // Load Balancers
     LoadBalancerExtension()->RegisterOrDie("rr", &g_ext->rr_lb);
@@ -386,6 +391,7 @@ static void GlobalInitializeOrDieImpl() {
     LoadBalancerExtension()->RegisterOrDie("c_md5", &g_ext->ch_md5_lb);
     LoadBalancerExtension()->RegisterOrDie("c_ketama", &g_ext->ch_ketama_lb);
     LoadBalancerExtension()->RegisterOrDie("_dynpart", &g_ext->dynpart_lb);
+    LoadBalancerExtension()->RegisterOrDie("ms", &g_ext->ms_lb);
 
     // Compress Handlers
     const CompressHandler gzip_compress =
