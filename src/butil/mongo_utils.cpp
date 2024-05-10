@@ -150,5 +150,10 @@ namespace mongo {
         channel = GetChannel(mongo_uri);
     }
 
+Cursor::Cursor(Collection* c) {
+    collection = c;
+    request_code = butil::fast_rand_less_than(UINT_MAX);
+}
+
 } // namespace mongo
 } // namespace butil

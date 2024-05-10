@@ -1,4 +1,5 @@
 #include "brpc/channel.h"
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -38,6 +39,14 @@ std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& s
 namespace mongo {
 class Client;
 class Database;
+class Collection;
+
+class Cursor {
+public:
+    Cursor(Collection* c);
+    Collection* collection;
+    uint64_t request_code;
+};
 
 class Collection {
 public:
