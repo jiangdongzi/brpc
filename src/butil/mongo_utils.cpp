@@ -137,7 +137,8 @@ namespace mongo {
         std::unique_ptr<brpc::Channel> channel_up(new brpc::Channel);
         brpc::ChannelOptions options;
         options.protocol = brpc::PROTOCOL_MONGO;
-        if (channel_up->Init(mongo_uri.c_str(), "ms", &options) != 0) {
+        std::string lb_with_ns_url = "ms:" + mongo_uri;
+        if (channel_up->Init(mongo_uri.c_str(), lb_with_ns_url.c_str(), &options) != 0) {
             LOG(ERROR) << "Fail to initialize channel";
             throw std::runtime_error("Fail to initialize channel");
         }
