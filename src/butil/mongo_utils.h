@@ -50,6 +50,53 @@ public:
     Cursor(Collection* c);
     Collection* collection;
     uint64_t request_code;
+
+    // 内部迭代器类
+    class Iterator {
+    public:
+        Iterator(Cursor* cursor, size_t pos) : cursor(cursor), position(pos) {}
+
+        Iterator& operator++() {
+            position++;
+            if (position >= cursor->docs.size() && cursor->hasMore) {
+                cursor->get_next_batch();
+                position = 0; // 重置位置到新批次的开始
+            }
+            return *this;
+        }
+
+        bool operator!=(const Iterator& other) const {
+            return position != other.position || cursor != other.cursor;
+        }
+
+        const bsoncxx::document::view& operator*() const {
+            return cursor->docs[position];
+        }
+
+    private:
+        Cursor* cursor;
+        size_t position;
+    };
+
+    // 提供迭代器的开始和结束
+    Iterator begin() {
+        if (!initialized) {
+            get_first_batch();
+        }
+        return Iterator(this, 0);
+    }
+
+    Iterator end() {
+        return Iterator(this, docs.size());
+    }
+
+private:
+    void get_first_batch();
+    void get_next_batch();
+    std::vector<bsoncxx::document::view> docs;
+    std::string body;
+    bool hasMore; // 标志是否还有更多数据可获取
+    bool initialized; // 标志是否已经初始化
 };
 
 class Collection {
