@@ -55,25 +55,6 @@ DEFINE_string(key, "hello", "The key to be get");
 DEFINE_string(value, "world", "The value associated with the key");
 DEFINE_int32(batch, 1, "Pipelined Operations");
 
-
-void parse_continuous_bson_data(const uint8_t* data, size_t length) {
-    size_t offset = 0;
-    while (offset < length) {
-        // 假设文档长度存储在前四个字节
-        uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data + offset);
-
-        // 创建 BSON 视图
-        bsoncxx::document::view view(data + offset, doc_length);
-        
-        // 将 BSON 转换为 JSON 并输出
-        std::cout << bsoncxx::to_json(view) << std::endl;
-        
-        // 移动偏移量到下一个文档的起始位置
-        offset += doc_length;
-    }
-}
-
-
 int main(int argc, char* argv[]) {
     // Parse gflags. We recommend you to use gflags as well.
     GFLAGS_NS::ParseCommandLineFlags(&argc, &argv, true);
@@ -119,7 +100,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+    butil::DeSerilizeBsonDocView(response.message());
     request.set_full_collection_name("myDatabase.test");
     cntl.Reset();
     response.Clear();
@@ -133,8 +114,7 @@ int main(int argc, char* argv[]) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return -1;
     }
-
-    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+    butil::DeSerilizeBsonDocView(response.message());
 
 //get more
     request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
@@ -148,7 +128,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    parse_continuous_bson_data((const uint8_t*)response.message().c_str(), response.message().length());
+    butil::DeSerilizeBsonDocView(response.message());
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
