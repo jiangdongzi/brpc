@@ -5,6 +5,7 @@
 #include "output/include/butil/containers/flat_map.h"
 #include <climits>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <butil/logging.h>
@@ -165,7 +166,6 @@ void Cursor::get_first_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    LOG(INFO) << "collection->database->name: " << collection->database->name;
     request.set_full_collection_name(collection->database->name + "." + collection->name);
     request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
@@ -175,7 +175,6 @@ void Cursor::get_first_batch() {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
         return;
     }
-    LOG(INFO) << "ivyjxj: " << response.ShortDebugString();
     body = response.message();
     docs = DeSerializeBsonDocView(body);
     cursor_id = response.cursor_id();
@@ -200,6 +199,11 @@ void Cursor::get_next_batch() {
     body = response.message();
     docs = DeSerializeBsonDocView(body);
     hasMore = response.cursor_id() != 0;
+}
+
+Collection::Collection (const std::string& collection_name, Database* const db) {
+    name = collection_name;
+    database = std::unique_ptr<Database>(new Database(*db));
 }
 
 std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> Client::channels;

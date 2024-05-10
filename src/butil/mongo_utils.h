@@ -1,5 +1,6 @@
 #include "brpc/channel.h"
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -80,7 +81,6 @@ public:
 
     // 提供迭代器的开始和结束
     Iterator begin() {
-        LOG(INFO) << "begin: initialized: " << initialized << ", hasMore: " << hasMore;
         if (!initialized) {
             get_first_batch();
         }
@@ -104,12 +104,10 @@ private:
 class Collection {
 public:
     std::string name;
-    Collection(const std::string& collection_name, Database* const db) {
-        name = collection_name;
-        database = db;
-    }
+    Collection(const std::string& collection_name, Database* const db);
     Cursor find(bsoncxx::document::view_or_value filter);
-    Database* database;
+    // Database* database;
+    std::unique_ptr<Database> database;
     bsoncxx::document::view_or_value filter;
 };
 
