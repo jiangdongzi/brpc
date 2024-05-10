@@ -25,6 +25,7 @@
 #include <gflags/gflags.h>
 #include <bthread/bthread.h>
 #include <butil/logging.h>
+#include <butil/mongo_utils.h>
 #include <butil/string_printf.h>
 #include <brpc/channel.h>
 #include <brpc/memcache.h>
@@ -110,6 +111,8 @@ int main(int argc, char* argv[]) {
     auto v = document.view();
     request.set_message((char*)v.data(), v.length());
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    auto request_code = butil::GetRandomSlavePreferredRequestCode();
+    cntl.set_request_code(request_code);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
@@ -124,6 +127,7 @@ int main(int argc, char* argv[]) {
     v = document.view();
     request.set_message((char*)v.data(), v.length());
     request.set_number_to_return(3);
+    cntl.set_request_code(request_code);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
@@ -136,6 +140,7 @@ int main(int argc, char* argv[]) {
     request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
     request.set_cursor_id(response.cursor_id());
     cntl.Reset();
+    cntl.set_request_code(request_code);
     response.Clear();
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
