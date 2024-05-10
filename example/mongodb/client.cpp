@@ -64,74 +64,13 @@ int main(int argc, char* argv[]) {
 
     // A Channel represents a communication line to a Server. Notice that 
     // Channel is thread-safe and can be shared by all threads in your program.
-    brpc::Channel channel;
-    
-    // Initialize the channel, NULL means using default options. 
-    brpc::ChannelOptions options;
-    options.protocol = brpc::PROTOCOL_MONGO;
-    options.connection_type = FLAGS_connection_type;
-    options.timeout_ms = FLAGS_timeout_ms/*milliseconds*/;
-    options.max_retry = FLAGS_max_retry;
 
-    if (channel.Init(FLAGS_server.c_str(), FLAGS_load_balancer.c_str(), &options) != 0) {
-        LOG(ERROR) << "Fail to initialize channel";
-        return -1;
+    butil::mongo::Client client(FLAGS_server);
+    auto col = client["myDatabase"]["test"];
+    bsoncxx::builder::basic::document doc;
+    auto views = col.find(doc.view());
+    for (auto&& view : views) {
+        std::cout << bsoncxx::to_json(view) << std::endl;
     }
-
-    // Pipeline #batch * #thread_num SET requests into memcache so that we
-    // have keys to get.
-    brpc::policy::MongoRequest request;
-    brpc::policy::MongoResponse response;
-    brpc::Controller cntl;
-
-    int32_t numberToReturn = 1; // Return all matching documents
-    request.set_full_collection_name("myDatabase.$cmd");
-    request.set_number_to_return(numberToReturn);
-    bsoncxx::builder::basic::document document{};
-    document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
-    request.set_message(butil::SerializeBsonDocView(document));
-    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
-    auto request_code = butil::GetRandomSlavePreferredRequestCode();
-    cntl.set_request_code(request_code);
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
-        return -1;
-    }
-
-    butil::DeSerializeBsonDocView(response.message());
-    request.set_full_collection_name("myDatabase.test");
-    cntl.Reset();
-    response.Clear();
-    document.clear();
-    request.set_message(butil::SerializeBsonDocView(document));
-    request.set_number_to_return(3);
-    cntl.set_request_code(request_code);
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
-        return -1;
-    }
-    butil::DeSerializeBsonDocView(response.message());
-
-//get more
-    request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
-    request.set_cursor_id(response.cursor_id());
-    cntl.Reset();
-    cntl.set_request_code(request_code);
-    response.Clear();
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
-        return -1;
-    }
-
-    butil::DeSerializeBsonDocView(response.message());
-
-    LOG(INFO) << "memcache_client is going to quit";
-    if (options.auth) {
-        delete options.auth;
-    }
-
     return 0;
 }
