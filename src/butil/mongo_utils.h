@@ -80,6 +80,7 @@ public:
 
     // 提供迭代器的开始和结束
     Iterator begin() {
+        LOG(INFO) << "begin: initialized: " << initialized << ", hasMore: " << hasMore;
         if (!initialized) {
             get_first_batch();
         }
@@ -95,9 +96,9 @@ private:
     void get_next_batch();
     std::vector<bsoncxx::document::view> docs;
     std::string body;
-    bool hasMore; // 标志是否还有更多数据可获取
-    bool initialized; // 标志是否已经初始化
-    int64_t cursor_id;
+    bool hasMore{}; // 标志是否还有更多数据可获取
+    bool initialized{}; // 标志是否已经初始化
+    int64_t cursor_id{};
 };
 
 class Collection {

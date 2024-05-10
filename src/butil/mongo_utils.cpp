@@ -165,6 +165,7 @@ void Cursor::get_first_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
+    LOG(INFO) << "collection->database->name: " << collection->database->name;
     request.set_full_collection_name(collection->database->name + "." + collection->name);
     request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
@@ -174,6 +175,7 @@ void Cursor::get_first_batch() {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
         return;
     }
+    LOG(INFO) << "ivyjxj: " << response.ShortDebugString();
     body = response.message();
     docs = DeSerializeBsonDocView(body);
     cursor_id = response.cursor_id();
