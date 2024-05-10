@@ -115,7 +115,7 @@ std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& s
         bsoncxx::document::view view(data + offset, doc_length);
         
         // 将 BSON 转换为 JSON 并输出
-        LOG(INFO) << bsoncxx::to_json(view);
+        result.emplace_back(view);
         
         // 移动偏移量到下一个文档的起始位置
         offset += doc_length;
