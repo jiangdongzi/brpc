@@ -89,8 +89,7 @@ int main(int argc, char* argv[]) {
     request.set_number_to_return(numberToReturn);
     bsoncxx::builder::basic::document document{};
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
-    auto v = document.view();
-    request.set_message((char*)v.data(), v.length());
+    request.set_message(butil::SerilizeBsonDocView(document));
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     auto request_code = butil::GetRandomSlavePreferredRequestCode();
     cntl.set_request_code(request_code);
@@ -105,8 +104,7 @@ int main(int argc, char* argv[]) {
     cntl.Reset();
     response.Clear();
     document.clear();
-    v = document.view();
-    request.set_message((char*)v.data(), v.length());
+    request.set_message(butil::SerilizeBsonDocView(document));
     request.set_number_to_return(3);
     cntl.set_request_code(request_code);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
