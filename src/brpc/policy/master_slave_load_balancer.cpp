@@ -150,7 +150,7 @@ int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
     if (_db_servers.Read(&s) != 0) {
         return ENOMEM;
     }
-    if (butil::ReadSlavePreferred(in.request_code)) {
+    if (read_slave_preferred) {
          if (SelectServerFromList(s->slave_server_list, in, out) == 0) {
             return 0;
          }
