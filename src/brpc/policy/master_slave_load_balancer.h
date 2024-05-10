@@ -45,6 +45,7 @@ private:
     static bool Remove(Servers& bg, const ServerId& id);
     static size_t BatchAdd(Servers& bg, const std::vector<ServerId>& servers);
     static size_t BatchRemove(Servers& bg, const std::vector<ServerId>& servers);
+    static int SelectServerFromList (const std::vector<ServerId>& server_list, const SelectIn& in, SelectOut* out);
 
     butil::DoublyBufferedData<Servers> _db_servers;
 };

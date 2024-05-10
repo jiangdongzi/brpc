@@ -20,6 +20,7 @@
 #include "butil/macros.h"
 #include "butil/fast_rand.h"
 #include "brpc/socket.h"
+#include "butil/mongo_utils.h"
 #include "brpc/policy/master_slave_load_balancer.h"
 
 namespace brpc {
@@ -114,24 +115,16 @@ size_t MasterSlaveLoadBalancer::RemoveServersInBatch(
     return n;
 }
 
-int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
-    butil::DoublyBufferedData<Servers>::ScopedPtr s;
-    if (!in.has_request_code) {
-        LOG(ERROR) << "Controller.set_request_code() is required";
-        return EINVAL;
-    }
-    if (_db_servers.Read(&s) != 0) {
-        return ENOMEM;
-    }
-    size_t n = s->master_server_list.size() + s->slave_server_list.size();
-    if (n == 0) {
+// int SelectServerFromList(const SelectIn& in, SelectOut* out
+int MasterSlaveLoadBalancer::SelectServerFromList (const std::vector<ServerId>& server_list, const SelectIn& in, SelectOut* out) {
+    if (server_list.empty()) {
         return ENODATA;
     }
     uint32_t stride = 0;
-    size_t offset = in.request_code % s->master_server_list.size();
-    for (size_t i = 0; i < n; ++i) {
-        const SocketId id = s->master_server_list[offset].id;
-        if (((i + 1) == n  // always take last chance
+    size_t offset = in.request_code % server_list.size();
+    for (size_t i = 0; i < server_list.size(); ++i) {
+        const SocketId id = server_list[offset].id;
+        if (((i + 1) == server_list.size()  // always take last chance
              || !ExcludedServers::IsExcluded(in.excluded, id))
             && Socket::Address(id, out->ptr) == 0
             && (*out->ptr)->IsAvailable()) {
@@ -143,9 +136,26 @@ int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
         }
         // If `Address' failed, use `offset+stride' to retry so that
         // this failed server won't be visited again inside for
-        offset = (offset + stride) % n;
+        offset = (offset + stride) % server_list.size();
     }
     return EHOSTDOWN;
+}
+
+int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
+    butil::DoublyBufferedData<Servers>::ScopedPtr s;
+    if (!in.has_request_code) {
+        LOG(ERROR) << "Controller.set_request_code() is required";
+        return EINVAL;
+    }
+    if (_db_servers.Read(&s) != 0) {
+        return ENOMEM;
+    }
+    if (butil::ReadSlavePreferred(in.request_code)) {
+         if (SelectServerFromList(s->slave_server_list, in, out) == 0) {
+            return 0;
+         }
+    }
+    return SelectServerFromList(s->master_server_list, in, out);
 }
 
 MasterSlaveLoadBalancer* MasterSlaveLoadBalancer::New(
