@@ -1,4 +1,5 @@
 #include "mongo_utils.h"
+#include "brpc/policy/mongo.pb.h"
 #include "butil/fast_rand.h"
 #include "output/include/brpc/channel.h"
 #include "output/include/butil/containers/flat_map.h"
@@ -97,9 +98,8 @@ uint64_t GetRandomSlavePreferredRequestCode() {
     return GetRandomRequestCode(MONGOC_READ_SLAVE_PREFERRED);
 }
 
-std::string SerializeBsonDocView(const bsoncxx::builder::basic::document& doc) {
-    auto v = doc.view();
-    return std::string((char*)v.data(), v.length());
+std::string SerializeBsonDocView(const bsoncxx::v_noabi::document::view view) {
+    return std::string((char*)view.data(), view.length());
 }
 std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& str)  {
     std::vector<bsoncxx::document::view> result;
@@ -159,6 +159,45 @@ Cursor::Cursor(Collection* c) {
 Cursor Collection::find(bsoncxx::document::view_or_value filter) {
     this->filter = filter;
     return Cursor(this);
+}
+
+void Cursor::get_first_batch() {
+    brpc::policy::MongoRequest request;
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    request.set_full_collection_name(collection->database->name + "." + collection->name);
+    request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
+    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    cntl.set_request_code(request_code);
+    collection->database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return;
+    }
+    body = response.message();
+    docs = DeSerializeBsonDocView(body);
+    cursor_id = response.cursor_id();
+    hasMore = response.cursor_id() != 0;
+    initialized = true;
+}
+
+void Cursor::get_next_batch() {
+    brpc::policy::MongoRequest request;
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    request.set_full_collection_name(collection->database->name + "." + collection->name);
+    request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
+    request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
+    request.set_cursor_id(cursor_id);
+    cntl.set_request_code(request_code);
+    collection->database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return;
+    }
+    body = response.message();
+    docs = DeSerializeBsonDocView(body);
+    hasMore = response.cursor_id() != 0;
 }
 
 } // namespace mongo
