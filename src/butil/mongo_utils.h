@@ -24,6 +24,10 @@ struct MongoDBUri {
     bool need_auth() const {
         return !username.empty() && !password.empty();
     }
+    bool read_slave_preferred() const {
+        auto it = options.find("readPreference");
+        return it != options.end() && it->second == "secondaryPreferred";
+    }
 };
 
 MongoDBUri parse_mongo_uri(const std::string& uri);

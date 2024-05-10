@@ -48,6 +48,7 @@ private:
     static int SelectServerFromList (const std::vector<ServerId>& server_list, const SelectIn& in, SelectOut* out);
 
     butil::DoublyBufferedData<Servers> _db_servers;
+    bool read_slave_preferred;
 };
 
 }  // namespace policy

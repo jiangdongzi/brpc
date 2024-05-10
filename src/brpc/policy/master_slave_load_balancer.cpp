@@ -160,7 +160,9 @@ int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
 
 MasterSlaveLoadBalancer* MasterSlaveLoadBalancer::New(
     const butil::StringPiece& params) const {
+    butil::MongoDBUri uri = butil::parse_mongo_uri(params.as_string());
     MasterSlaveLoadBalancer* lb = new (std::nothrow) MasterSlaveLoadBalancer;
+    lb->read_slave_preferred = uri.read_slave_preferred();
     return lb;
 }
 
