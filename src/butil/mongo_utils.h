@@ -51,6 +51,8 @@ public:
     Cursor(Collection* c);
     Collection* collection;
     uint64_t request_code;
+    brpc::Channel* chan;
+    std::string full_collection_name;
 
     // 内部迭代器类
     class Iterator {

@@ -155,6 +155,8 @@ namespace mongo {
 Cursor::Cursor(Collection* c) {
     collection = c;
     request_code = butil::fast_rand_less_than(UINT_MAX);
+    chan = collection->database->client->channel;
+    full_collection_name = collection->database->name + "." + collection->name;
 }
 
 Cursor Collection::find(bsoncxx::document::view_or_value filter) {
@@ -166,11 +168,11 @@ void Cursor::get_first_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    request.set_full_collection_name(collection->database->name + "." + collection->name);
+    request.set_full_collection_name(full_collection_name);
     request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     cntl.set_request_code(request_code);
-    collection->database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    chan->CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
         return;
@@ -186,12 +188,12 @@ void Cursor::get_next_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    request.set_full_collection_name(collection->database->name + "." + collection->name);
+    request.set_full_collection_name(full_collection_name);
     request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
     request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
     request.set_cursor_id(cursor_id);
     cntl.set_request_code(request_code);
-    collection->database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    chan->CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
         return;
