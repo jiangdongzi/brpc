@@ -200,5 +200,8 @@ void Cursor::get_next_batch() {
     hasMore = response.cursor_id() != 0;
 }
 
+std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> Client::channels;
+thread_local std::unordered_map<std::string, brpc::Channel*> Client::tls_channels;
+
 } // namespace mongo
 } // namespace butil
