@@ -31,7 +31,7 @@ uint64_t GetRandomRequestCode (const uint64_t flag);
 bool ReadSlavePreferred (const uint64_t request_code);
 uint64_t GetRandomSlavePreferredRequestCode();
 
-std::string SerilizeBsonDocView(const bsoncxx::builder::basic::document& doc);
-std::vector<bsoncxx::document::view> DeSerilizeBsonDocView(const std::string& str);
+std::string SerializeBsonDocView(const bsoncxx::builder::basic::document& doc);
+std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& str);
 
 } // namespace butil

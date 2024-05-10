@@ -93,11 +93,11 @@ uint64_t GetRandomSlavePreferredRequestCode() {
     return GetRandomRequestCode(MONGOC_READ_SLAVE_PREFERRED);
 }
 
-std::string SerilizeBsonDocView(const bsoncxx::builder::basic::document& doc) {
+std::string SerializeBsonDocView(const bsoncxx::builder::basic::document& doc) {
     auto v = doc.view();
     return std::string((char*)v.data(), v.length());
 }
-std::vector<bsoncxx::document::view> DeSerilizeBsonDocView(const std::string& str)  {
+std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& str)  {
     std::vector<bsoncxx::document::view> result;
     size_t offset = 0;
     const uint8_t* data = (const uint8_t*)str.c_str();

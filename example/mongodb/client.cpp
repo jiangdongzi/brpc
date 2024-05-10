@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
     request.set_number_to_return(numberToReturn);
     bsoncxx::builder::basic::document document{};
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
-    request.set_message(butil::SerilizeBsonDocView(document));
+    request.set_message(butil::SerializeBsonDocView(document));
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     auto request_code = butil::GetRandomSlavePreferredRequestCode();
     cntl.set_request_code(request_code);
@@ -99,12 +99,12 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    butil::DeSerilizeBsonDocView(response.message());
+    butil::DeSerializeBsonDocView(response.message());
     request.set_full_collection_name("myDatabase.test");
     cntl.Reset();
     response.Clear();
     document.clear();
-    request.set_message(butil::SerilizeBsonDocView(document));
+    request.set_message(butil::SerializeBsonDocView(document));
     request.set_number_to_return(3);
     cntl.set_request_code(request_code);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return -1;
     }
-    butil::DeSerilizeBsonDocView(response.message());
+    butil::DeSerializeBsonDocView(response.message());
 
 //get more
     request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    butil::DeSerilizeBsonDocView(response.message());
+    butil::DeSerializeBsonDocView(response.message());
 
     LOG(INFO) << "memcache_client is going to quit";
     if (options.auth) {
