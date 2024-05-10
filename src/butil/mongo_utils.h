@@ -1,4 +1,5 @@
 #include "brpc/channel.h"
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -64,12 +65,19 @@ public:
             if (position >= cursor->docs.size() && cursor->hasMore) {
                 cursor->get_next_batch();
                 position = 0; // 重置位置到新批次的开始
+            } else if (!cursor->hasMore && position >= cursor->docs.size()) {
+                cursor = nullptr;
             }
             return *this;
         }
 
         bool operator!=(const Iterator& other) const {
-            return position != other.position || cursor != other.cursor;
+            return !(other == *this);
+        }
+
+        bool operator==(const Iterator& other) const {
+            // return position != other.position || cursor != other.cursor;
+            return (cursor == nullptr && other.cursor == nullptr) || (position == other.position && cursor == other.cursor);
         }
 
         const bsoncxx::document::view& operator*() const {
@@ -90,7 +98,7 @@ public:
     }
 
     Iterator end() {
-        return Iterator(this, docs.size());
+        return Iterator(nullptr, docs.size());
     }
 
 private:
