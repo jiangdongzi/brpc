@@ -23,4 +23,9 @@ struct MongoDBUri {
 
 MongoDBUri parse_mongo_uri(const std::string& uri);
 bool need_auth_mongo(const std::string& uri);
+
+uint64_t GetRandomRequestCode (const uint64_t flag);
+bool ReadSlavePreferred (const uint64_t request_code);
+uint64_t GetRandomSlavePreferredRequestCode();
+
 } // namespace butil
