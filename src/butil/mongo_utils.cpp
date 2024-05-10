@@ -130,11 +130,9 @@ namespace mongo {
         }
         static std::mutex mtx;
         std::lock_guard<std::mutex> lock_gurad(mtx);
-        brpc::Channel* channel;
         if (channels.find(mongo_uri) != channels.end()) {
-            channel = channels[mongo_uri].get();
-            tls_channels[mongo_uri] = channel;
-            return channel;
+            tls_channels[mongo_uri] = channels[mongo_uri].get();
+            return tls_channels[mongo_uri];
         }
         std::unique_ptr<brpc::Channel> channel_up(new brpc::Channel);
         brpc::ChannelOptions options;
@@ -143,11 +141,10 @@ namespace mongo {
             LOG(ERROR) << "Fail to initialize channel";
             throw std::runtime_error("Fail to initialize channel");
         }
-        channel = channel_up.release();
-        channels[mongo_uri].reset(channel);
-        tls_channels[mongo_uri] = channel;
-        return channel;
-    }   
+        channels[mongo_uri].reset(channel_up.release());
+        tls_channels[mongo_uri] = channels[mongo_uri].get();
+        return tls_channels[mongo_uri];
+    }
 
     Client::Client(const std::string& mongo_uri) {
         channel = GetChannel(mongo_uri);
