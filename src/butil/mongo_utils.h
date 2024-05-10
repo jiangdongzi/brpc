@@ -1,3 +1,4 @@
+#include "brpc/channel.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -33,5 +34,19 @@ uint64_t GetRandomSlavePreferredRequestCode();
 
 std::string SerializeBsonDocView(const bsoncxx::builder::basic::document& doc);
 std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& str);
+
+namespace mongo {
+class Client {
+public:
+    Client(const std::string& mongo_uri);
+
+private:
+    brpc::Channel* channel;
+    static std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> channels;
+    static thread_local std::unordered_map<std::string, brpc::Channel*> tls_channels;
+    static brpc::Channel* GetChannel(const std::string& mongo_uri);
+};
+} // namespace mongo
+
 
 } // namespace butil

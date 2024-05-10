@@ -1,10 +1,14 @@
 #include "mongo_utils.h"
 #include "butil/fast_rand.h"
+#include "output/include/brpc/channel.h"
+#include "output/include/butil/containers/flat_map.h"
 #include <climits>
 #include <cstdint>
+#include <mutex>
 #include <sstream>
 #include <butil/logging.h>
 #include <bsoncxx/json.hpp>
+#include <unordered_map>
 
 namespace butil {
 
@@ -118,4 +122,36 @@ std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& s
     return result;
 }
 
+namespace mongo {
+    brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
+        auto it = tls_channels.find(mongo_uri);
+        if (it != tls_channels.end()) {
+            return it->second;
+        }
+        static std::mutex mtx;
+        std::lock_guard<std::mutex> lock_gurad(mtx);
+        brpc::Channel* channel;
+        if (channels.find(mongo_uri) != channels.end()) {
+            channel = channels[mongo_uri].get();
+            tls_channels[mongo_uri] = channel;
+            return channel;
+        }
+        std::unique_ptr<brpc::Channel> channel_up(new brpc::Channel);
+        brpc::ChannelOptions options;
+        options.protocol = brpc::PROTOCOL_MONGO;
+        if (channel_up->Init(mongo_uri.c_str(), "ms", &options) != 0) {
+            LOG(ERROR) << "Fail to initialize channel";
+            throw std::runtime_error("Fail to initialize channel");
+        }
+        channel = channel_up.release();
+        channels[mongo_uri].reset(channel);
+        tls_channels[mongo_uri] = channel;
+        return channel;
+    }   
+
+    Client::Client(const std::string& mongo_uri) {
+        channel = GetChannel(mongo_uri);
+    }
+
+} // namespace mongo
 } // namespace butil
