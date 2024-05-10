@@ -156,5 +156,10 @@ Cursor::Cursor(Collection* c) {
     request_code = butil::fast_rand_less_than(UINT_MAX);
 }
 
+Cursor Collection::find(bsoncxx::document::view_or_value filter) {
+    this->filter = filter;
+    return Cursor(this);
+}
+
 } // namespace mongo
 } // namespace butil

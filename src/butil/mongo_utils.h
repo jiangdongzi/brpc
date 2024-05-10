@@ -59,7 +59,9 @@ public:
         name = collection_name;
         database = db;
     }
+    Cursor find(bsoncxx::document::view_or_value filter);
     Database* database;
+    bsoncxx::document::view_or_value filter;
 };
 
 class Database {
