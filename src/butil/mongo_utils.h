@@ -1,4 +1,5 @@
 #include "brpc/channel.h"
+#include "brpc/policy/mongo.pb.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -144,7 +145,7 @@ private:
 
 bsoncxx::document::view GetViewFromRawBody(const std::string& body);
 
-std::string BuildSections (const bsoncxx::builder::basic::document& doc);
+void AddDoc2Request(const bsoncxx::builder::basic::document& doc, brpc::policy::MongoRequest* request);
 
 } // namespace mongo
 

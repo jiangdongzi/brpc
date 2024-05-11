@@ -183,8 +183,7 @@ void Cursor::get_first_batch() {
     doc.append(bsoncxx::builder::basic::kvp("filter", collection->filter));
     doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
 
-    std::string sections = BuildSections(doc);
-    request.set_sections(std::move(sections));
+    AddDoc2Request(doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     cntl.set_request_code(request_code);
     chan->CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -217,8 +216,7 @@ void Cursor::get_next_batch() {
     doc.append(bsoncxx::builder::basic::kvp("getMore", cursor_id));
     doc.append(bsoncxx::builder::basic::kvp("collection", collection->name));
     doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
-    std::string sections = BuildSections(doc);
-    request.set_sections(std::move(sections));
+    AddDoc2Request(doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     cntl.set_request_code(request_code);
     chan->CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -265,11 +263,16 @@ Cursor::Iterator& Cursor::Iterator::operator++() {
 std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> Client::channels;
 thread_local std::unordered_map<std::string, brpc::Channel*> Client::tls_channels;
 
-std::string BuildSections (const bsoncxx::builder::basic::document& doc) {
+static std::string BuildSections (const bsoncxx::builder::basic::document& doc) {
     std::string sections;
     sections += '\0';
     sections.append((char*)doc.view().data(), doc.view().length());
     return sections;
+}
+
+void AddDoc2Request(const bsoncxx::builder::basic::document& doc, brpc::policy::MongoRequest* request) {
+    std::string sections = BuildSections(doc);
+    request->set_sections(std::move(sections));
 }
 
 } // namespace mongo

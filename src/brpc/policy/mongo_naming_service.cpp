@@ -72,8 +72,7 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
     document.append(bsoncxx::builder::basic::kvp("$db", mongo_uri.database));
 
-    std::string sections = butil::mongo::BuildSections(document);
-    request.set_sections(sections);
+    butil::mongo::AddDoc2Request(document, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
