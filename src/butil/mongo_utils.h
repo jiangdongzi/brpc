@@ -60,20 +60,9 @@ public:
     public:
         Iterator(Cursor* cursor, bsoncxx::document::view::iterator in_it) : cursor(cursor), it(in_it) {}
 
-        Iterator& operator++() {
-            it++;
-            if (it == cursor->docs.end() && cursor->hasMore) {
-                cursor->get_next_batch();
-                if (cursor->docs.begin() != cursor->docs.end()) {
-                    it = cursor->docs.begin();
-                } else {
-                    cursor = nullptr;
-                    return *this;
-                }
-            } else if (!cursor->hasMore && it == cursor->docs.end()) {
-                cursor = nullptr;
-            }
-            return *this;
+        Iterator& operator++();
+        Iterator& operator++(int) {
+            return operator++();
         }
 
         bool operator!=(const Iterator& other) const {

@@ -250,6 +250,22 @@ Collection::Collection (const std::string& collection_name, Database* const db) 
     database = std::unique_ptr<Database>(new Database(*db));
 }
 
+Cursor::Iterator& Cursor::Iterator::operator++() {
+    it++;
+    if (it == cursor->docs.end() && cursor->hasMore) {
+        cursor->get_next_batch();
+        if (cursor->docs.begin() != cursor->docs.end()) {
+            it = cursor->docs.begin();
+        } else {
+            cursor = nullptr;
+            return *this;
+        }
+    } else if (!cursor->hasMore && it == cursor->docs.end()) {
+        cursor = nullptr;
+    }
+    return *this;
+}
+
 std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> Client::channels;
 thread_local std::unordered_map<std::string, brpc::Channel*> Client::tls_channels;
 
