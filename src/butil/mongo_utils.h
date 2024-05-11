@@ -144,6 +144,8 @@ private:
 
 bsoncxx::document::view GetViewFromRawBody(const std::string& body);
 
+std::string BuildSections (const bsoncxx::builder::basic::document& doc);
+
 } // namespace mongo
 
 

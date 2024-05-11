@@ -111,7 +111,6 @@ int GetConversationId (const uint8_t* data, size_t length) {
 
 int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     //first step
-    #if 0
     const std::string& user_name = _uri.username;
     const std::string& password = _uri.password;
     const std::string& database = _uri.database;
@@ -134,9 +133,9 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     command.append(bsoncxx::builder::basic::kvp("mechanism", "SCRAM-SHA-1"));
     AppendBinary(command, "payload", first_message);
     command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
+    command.append(bsoncxx::builder::basic::kvp("$db", database));
 
     bsoncxx::document::view_or_value view = command.view();
-    std::string fullCollectionName = database + ".$cmd";
 
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
@@ -152,8 +151,6 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
         return -1;
     }
 
-    request.set_full_collection_name(fullCollectionName);
-    request.set_number_to_return(1);
     // bsoncxx::builder::stream::document document{};
     auto v = command.view();
     request.set_message((char*)v.data(), v.length());
@@ -260,7 +257,6 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
 
     bool is_done = IsDone((const uint8_t*)response.message().c_str(), response.message().size());
     LOG(INFO) << "is_done: " << is_done;
-    #endif
 
     return 0;
 }
