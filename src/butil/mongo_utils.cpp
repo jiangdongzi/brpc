@@ -84,22 +84,6 @@ uint64_t GetRandomRequestCode (const uint64_t flag) {
     auto random = butil::fast_rand_less_than(UINT_MAX);
     return (flag << 32) | random;
 }
-//定义flag enum
-enum {
-    MONGOC_READ_SLAVE_PREFERRED = (1 << 2)
-};
-
-static uint32_t ExtractFlag (const uint64_t request_code) {
-    return request_code >> 32;
-}
-
-bool ReadSlavePreferred (const uint64_t request_code) {
-    return ExtractFlag(request_code) & MONGOC_READ_SLAVE_PREFERRED;
-}
-
-uint64_t GetRandomSlavePreferredRequestCode() {
-    return GetRandomRequestCode(MONGOC_READ_SLAVE_PREFERRED);
-}
 
 namespace mongo {
 
