@@ -84,14 +84,6 @@ static void AppendBinary(bsoncxx::builder::basic::document& builder,
 #define MONGOC_SCRAM_SERVER_KEY "Server Key"
 #define MONGOC_SCRAM_CLIENT_KEY "Client Key"
 
-static bsoncxx::document::view GetView(const uint8_t* data, size_t length) {
-    // 文档长度存储在前四个字节
-    uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data);
-    bsoncxx::document::view view(data, doc_length);
-    LOG(INFO) << bsoncxx::to_json(view);
-    return view;
-}
-
 static std::string GetPayload(const std::string& data) {
     bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(data);
     auto v = view["payload"].get_binary();
