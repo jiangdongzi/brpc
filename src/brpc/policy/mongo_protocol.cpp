@@ -429,17 +429,7 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     ControllerPrivateAccessor accessor(cntl);
     MongoResponse res;
     auto& payload = msg->payload;
-    res.mutable_header()->set_op_code(static_cast<MongoOp>(header->op_code));
-    if (header->op_code == OPREPLY) {
-        constexpr int body_header_len = sizeof(int32_t) * 3 + sizeof(int64_t);
-        char body_header[body_header_len];
-        payload.cutn(body_header, body_header_len);
-        res.set_response_flags(*(int32_t*)body_header);
-        res.set_cursor_id(*(int64_t*)(body_header + sizeof(int32_t)));
-        res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
-        res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
-        res.set_message(payload.to_string());
-    } else if (header->op_code == OP_MSG) {
+    if (header->op_code == OP_MSG) {
         uint32_t flags;
         payload.cutn(&flags, 4);
         res.set_response_flags(flags);
