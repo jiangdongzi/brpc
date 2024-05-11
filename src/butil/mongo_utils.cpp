@@ -195,12 +195,12 @@ void Cursor::get_first_batch() {
     response.mutable_sections()->swap(body);
     bsoncxx::document::view view = GetViewFromRawBody(body);
     LOG(INFO) << "view: " << bsoncxx::to_json(view);
-    auto cursor_info = view["cursor"];
-    bool ok = cursor_info["ok"].get_double() == 1.0;
+    bool ok = view["ok"].get_double() == 1.0;
     if (!ok) {
-        LOG(ERROR) << "not ok: " << cursor_info["ok"].get_double();
+        LOG(ERROR) << "not ok: " << view["ok"].get_double();
         return;
     }
+    auto cursor_info = view["cursor"];
     cursor_id = cursor_info["id"].get_int64();
     hasMore = cursor_id != 0;
     docs = cursor_info["firstBatch"].get_array().value;
