@@ -375,6 +375,23 @@ void SerializeMongoRequest(butil::IOBuf* buf,
             buf->append(&cursor_id, sizeof(cursor_id));
             break;
         }
+        case OP_MSG:
+        {
+            mongo_head_t header = {
+                (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + 1 + req->message().size()),
+                1,
+                0,
+                OP_MSG
+            };
+            LOG(INFO) << "header: " << header;
+            buf->append(&header, sizeof(header));
+            const int flags = req->flags();
+            buf->append(&flags, sizeof(flags));
+            const int8_t section_type = req->section_type();
+            buf->append(&section_type, sizeof(section_type));
+            buf->append(req->message());
+            break;
+        }
         case OPREPLY:
         case DB_UPDATE:
         case DB_INSERT:
