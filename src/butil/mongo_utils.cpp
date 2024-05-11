@@ -182,6 +182,7 @@ void Cursor::get_first_batch() {
     doc.append(bsoncxx::builder::basic::kvp("find", collection->name));
     doc.append(bsoncxx::builder::basic::kvp("filter", collection->filter));
     doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
+    doc.append(bsoncxx::builder::basic::kvp("batchSize", 1));
     sections.append((char*)doc.view().data(), doc.view().length());
 
     request.set_sections(sections);
@@ -212,19 +213,37 @@ void Cursor::get_next_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    // request.set_full_collection_name(full_collection_name);
-    // request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
-    // request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
-    // request.set_cursor_id(cursor_id);
-    // cntl.set_request_code(request_code);
-    // chan->CallMethod(NULL, &cntl, &request, &response, NULL);
-    // if (cntl.Failed()) {
-    //     LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
-    //     return;
-    // }
-    // body = response.message();
-    // docs = DeSerializeBsonDocView(body.c_str() + 1);
-    // hasMore = response.cursor_id() != 0;
+    std::string sections;
+    sections += '\0';
+    // sections.append((char*)collection->filter.view().data(), collection->filter.view().length());
+    bsoncxx::builder::basic::document doc;
+    doc.append(bsoncxx::builder::basic::kvp("getMore", cursor_id));
+    doc.append(bsoncxx::builder::basic::kvp("collection", collection->name));
+    doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
+    doc.append(bsoncxx::builder::basic::kvp("batchSize", 2));
+    sections.append((char*)doc.view().data(), doc.view().length());
+
+    request.set_sections(sections);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
+    cntl.set_request_code(request_code);
+    chan->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return;
+    }
+    response.mutable_sections()->swap(body);
+    bsoncxx::document::view view = GetViewFromRawBody(body);
+    LOG(INFO) << "view: " << bsoncxx::to_json(view);
+    bool ok = view["ok"].get_double() == 1.0;
+    if (!ok) {
+        hasMore = false;
+        LOG(ERROR) << "not ok: " << view["ok"].get_double();
+        return;
+    }
+    auto cursor_info = view["cursor"];
+    cursor_id = cursor_info["id"].get_int64();
+    hasMore = cursor_id != 0;
+    docs = cursor_info["nextBatch"].get_array().value;
 }
 
 Collection::Collection (const std::string& collection_name, Database* const db) {

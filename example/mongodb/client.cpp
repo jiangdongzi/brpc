@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     bsoncxx::builder::basic::document doc;
     auto views = col.find(doc.view());
     for (auto&& view : views) {
-        std::cout << bsoncxx::to_json(view) << std::endl;
+        std::cout << "ivyjxj::" << bsoncxx::to_json(view) << std::endl;
     }
     return 0;
 }
