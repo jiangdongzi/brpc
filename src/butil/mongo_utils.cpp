@@ -122,7 +122,9 @@ std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& s
     return result;
 }
 
-static bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
+namespace mongo {
+
+bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
     DCHECK(*body.c_str() == 0);
     uint32_t doc_length = *(int*)(body.c_str() + 1);
     DCHECK(doc_length == body.size() - 1);
@@ -130,34 +132,33 @@ static bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
     return bsoncxx::document::view(data, doc_length);
 }
 
-namespace mongo {
-    brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
-        auto it = tls_channels.find(mongo_uri);
-        if (it != tls_channels.end()) {
-            return it->second;
-        }
-        static std::mutex mtx;
-        std::lock_guard<std::mutex> lock_gurad(mtx);
-        if (channels.find(mongo_uri) != channels.end()) {
-            tls_channels[mongo_uri] = channels[mongo_uri].get();
-            return tls_channels[mongo_uri];
-        }
-        std::unique_ptr<brpc::Channel> channel_up(new brpc::Channel);
-        brpc::ChannelOptions options;
-        options.protocol = brpc::PROTOCOL_MONGO;
-        std::string lb_with_ns_url = "ms:" + mongo_uri;
-        if (channel_up->Init("0.0.0.0:7017", &options) != 0) {
-            LOG(ERROR) << "Fail to initialize channel";
-            throw std::runtime_error("Fail to initialize channel");
-        }
-        channels[mongo_uri].reset(channel_up.release());
+brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
+    auto it = tls_channels.find(mongo_uri);
+    if (it != tls_channels.end()) {
+        return it->second;
+    }
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock_gurad(mtx);
+    if (channels.find(mongo_uri) != channels.end()) {
         tls_channels[mongo_uri] = channels[mongo_uri].get();
         return tls_channels[mongo_uri];
     }
-
-    Client::Client(const std::string& mongo_uri) {
-        channel = GetChannel(mongo_uri);
+    std::unique_ptr<brpc::Channel> channel_up(new brpc::Channel);
+    brpc::ChannelOptions options;
+    options.protocol = brpc::PROTOCOL_MONGO;
+    std::string lb_with_ns_url = "ms:" + mongo_uri;
+    if (channel_up->Init("0.0.0.0:7017", &options) != 0) {
+        LOG(ERROR) << "Fail to initialize channel";
+        throw std::runtime_error("Fail to initialize channel");
     }
+    channels[mongo_uri].reset(channel_up.release());
+    tls_channels[mongo_uri] = channels[mongo_uri].get();
+    return tls_channels[mongo_uri];
+}
+
+Client::Client(const std::string& mongo_uri) {
+    channel = GetChannel(mongo_uri);
+}
 
 Cursor::Cursor(Collection* c) {
     collection = c;

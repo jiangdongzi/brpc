@@ -156,6 +156,7 @@ private:
     static brpc::Channel* GetChannel(const std::string& mongo_uri);
 };
 
+bsoncxx::document::view GetViewFromRawBody(const std::string& body);
 
 } // namespace mongo
 

@@ -45,7 +45,6 @@ namespace policy {
 MongoNamingService::MongoNamingService() = default;
 
 static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::string& host) {
-    #if 0
     brpc::Channel channel;
     const butil::MongoDBUri mongo_uri = butil::parse_mongo_uri(mongo_uri_str);
     
@@ -68,22 +67,21 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
-    request.set_full_collection_name(mongo_uri.database + ".$cmd");
-    request.set_number_to_return(1);
     bsoncxx::builder::basic::document document{};
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
     auto v = document.view();
-    request.set_message((char*)v.data(), v.length());
-    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    std::string sections;
+    sections += '\0';
+    sections.append((char*)document.view().data(), document.view().length());
+    request.set_sections(sections);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return "";
     }
-    LOG(INFO) << "response_flags: " << response.response_flags();
-    return response.message();
-    #endif
-    return "";
+    LOG(INFO) << "response_flags: " << response.flag_bits();
+    return response.sections();
 }
 
 std::vector<std::string> ResolveHostsToIPPort(const std::vector<std::string>& hosts) {
@@ -160,7 +158,7 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
             continue;
         }
         // 创建 BSON 视图
-        bsoncxx::document::view view(data, doc_length);
+        bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(is_master_msg);
         auto v = view["ismaster"];
         butil::EndPoint point;
         str2endpoint(host.c_str(), &point);
