@@ -206,8 +206,8 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     builder.append(bsoncxx::builder::basic::kvp("saslContinue", 1));
     builder.append(bsoncxx::builder::basic::kvp("conversationId", conv_id));
     AppendBinary(builder, "payload", out_str);
-    v = builder.view();
-    request.set_message((char*)v.data(), v.length());
+    builder.append(bsoncxx::builder::basic::kvp("$db", database));
+    butil::mongo::AddDoc2Request(builder, &request);
     response.Clear();
     cntl.Reset();
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -215,7 +215,7 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return -1;
     }
-    const std::string second_payload_str = GetPayload((const uint8_t*)response.message().c_str(), response.message().size());
+    const std::string second_payload_str = GetPayload(response.sections());
     LOG(INFO) << "second_payload_str: " << second_payload_str;
 
     //verify server signature
@@ -243,8 +243,9 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     // 添加一个空的payload字段
     // 注意：根据你的需要，如果payload应该是空的二进制数据，你可以如下设置：
     builder.append(kvp("payload", bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, 0, nullptr}));
-    v = builder.view();
-    request.set_message((char*)v.data(), v.length());
+    builder.append(bsoncxx::builder::basic::kvp("$db", database));
+    butil::mongo::AddDoc2Request(builder, &request);
+
     cntl.Reset();
 
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -253,7 +254,7 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
         return -1;
     }
 
-    bool is_done = IsDone((const uint8_t*)response.message().c_str(), response.message().size());
+    bool is_done = IsDone(response.sections());
     LOG(INFO) << "is_done: " << is_done;
 
     return 0;
