@@ -58,7 +58,7 @@ public:
     // 内部迭代器类
     class Iterator {
     public:
-        Iterator(Cursor* cursor) : cursor(cursor) {}
+        Iterator(Cursor* cursor, bsoncxx::document::view::iterator in_it) : cursor(cursor), it(in_it) {}
 
         Iterator& operator++() {
             it++;
@@ -94,11 +94,11 @@ public:
         if (!initialized) {
             get_first_batch();
         }
-        return Iterator(this);
+        return Iterator(this, docs.begin());
     }
 
     Iterator end() {
-        return Iterator(nullptr);
+        return Iterator(nullptr, docs.end());
     }
 
 private:
