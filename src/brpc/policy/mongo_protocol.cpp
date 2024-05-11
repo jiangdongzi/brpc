@@ -411,9 +411,6 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     // const int64_t start_parse_us = butil::cpuwide_time_us();
     DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
 
-    char buf[sizeof(mongo_head_t)];
-    const char *p = (const char *)msg->meta.fetch(buf, sizeof(buf));
-    const mongo_head_t *header = (const mongo_head_t*)p;
     Socket* socket = msg->socket();
     const bthread_id_t cid = {socket->correlation_id()};
     Controller* cntl = NULL;
