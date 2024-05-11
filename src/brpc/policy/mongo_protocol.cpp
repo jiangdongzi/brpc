@@ -440,13 +440,11 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
         LOG(INFO) << "response: " << res.ShortDebugString();
 
     } else if (header->op_code == OP_MSG) {
-        constexpr int body_header_len = sizeof(int32_t) * 3 + sizeof(int64_t);
+        constexpr int body_header_len = sizeof(uint32_t) * 3 + sizeof(char);
         char body_header[body_header_len];
         payload.cutn(body_header, body_header_len);
         res.set_response_flags(*(int32_t*)body_header);
-        res.set_cursor_id(*(int64_t*)(body_header + sizeof(int32_t)));
-        res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
-        res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
+        res.set_section_type(*(char*)(body_header + sizeof(int32_t)));
         res.set_message(payload.to_string());
     } else {
         LOG(INFO) << "invalid op_code: " << header->op_code;
