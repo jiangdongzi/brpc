@@ -147,7 +147,7 @@ brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
     brpc::ChannelOptions options;
     options.protocol = brpc::PROTOCOL_MONGO;
     std::string lb_with_ns_url = "ms:" + mongo_uri;
-    if (channel_up->Init("0.0.0.0:7017", &options) != 0) {
+    if (channel_up->Init(mongo_uri.c_str(), lb_with_ns_url.c_str(), &options) != 0) {
         LOG(ERROR) << "Fail to initialize channel";
         throw std::runtime_error("Fail to initialize channel");
     }

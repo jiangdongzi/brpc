@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <bsoncxx/json.hpp>
 
 namespace brpc {
 namespace policy {
@@ -69,6 +70,8 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
 
     bsoncxx::builder::basic::document document{};
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
+    document.append(bsoncxx::builder::basic::kvp("$db", mongo_uri.database));
+
     std::string sections;
     sections += '\0';
     sections.append((char*)document.view().data(), document.view().length());
@@ -150,14 +153,9 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
         if (is_master_msg.empty()) {
             continue;
         }
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(is_master_msg.c_str());
-        uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data);
-        if (doc_length != is_master_msg.size()) {
-            LOG(ERROR) << "Invalid BSON message length: " << doc_length;
-            continue;
-        }
         // 创建 BSON 视图
         bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(is_master_msg);
+        LOG(INFO) << bsoncxx::to_json(view);
         auto v = view["ismaster"];
         butil::EndPoint point;
         str2endpoint(host.c_str(), &point);
