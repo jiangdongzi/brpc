@@ -429,6 +429,7 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     ControllerPrivateAccessor accessor(cntl);
     MongoResponse res;
     auto& payload = msg->payload;
+    res.mutable_header()->set_op_code(static_cast<MongoOp>(header->op_code));
     if (header->op_code == OPREPLY) {
         constexpr int body_header_len = sizeof(int32_t) * 3 + sizeof(int64_t);
         char body_header[body_header_len];
@@ -447,8 +448,8 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
         LOG(INFO) << "invalid op_code: " << header->op_code;
         cntl->SetFailed(ERESPONSE, "invalid op_code: %d", header->op_code);
     }
-    res.Swap((MongoResponse*)cntl->response());
     LOG(INFO) << "response: " << res.ShortDebugString();
+    res.Swap((MongoResponse*)cntl->response());
 
     const int saved_error = cntl->ErrorCode();
     // Unlocks correlation_id inside. Revert controller's
