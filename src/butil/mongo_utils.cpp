@@ -3,6 +3,7 @@
 #include "butil/fast_rand.h"
 #include "output/include/brpc/channel.h"
 #include "output/include/butil/containers/flat_map.h"
+#include "output/include/butil/logging.h"
 #include <climits>
 #include <cstdint>
 #include <memory>
@@ -10,6 +11,7 @@
 #include <sstream>
 #include <butil/logging.h>
 #include <bsoncxx/json.hpp>
+#include <string>
 #include <unordered_map>
 
 namespace butil {
@@ -99,9 +101,6 @@ uint64_t GetRandomSlavePreferredRequestCode() {
     return GetRandomRequestCode(MONGOC_READ_SLAVE_PREFERRED);
 }
 
-std::string SerializeBsonDocView(const bsoncxx::v_noabi::document::view view) {
-    return std::string((char*)view.data(), view.length());
-}
 std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& str)  {
     std::vector<bsoncxx::document::view> result;
     size_t offset = 0;
@@ -121,6 +120,14 @@ std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& s
         offset += doc_length;
     }
     return result;
+}
+
+static bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
+    DCHECK(*body.c_str() == 0);
+    uint32_t doc_length = *(int*)(body.c_str() + 1);
+    DCHECK(doc_length == body.size() - 1);
+    const uint8_t* data = (const uint8_t*)(body.c_str() + 1);
+    return bsoncxx::document::view(data, doc_length);
 }
 
 namespace mongo {
@@ -168,8 +175,10 @@ void Cursor::get_first_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    request.set_full_collection_name(full_collection_name);
-    request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
+    std::string sections;
+    sections += '\0';
+    sections.append((char*)collection->filter.view().data(), collection->filter.view().length());
+    request.set_sections(sections);
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     cntl.set_request_code(request_code);
     chan->CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -177,10 +186,9 @@ void Cursor::get_first_batch() {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
         return;
     }
-    body = response.message();
-    docs = DeSerializeBsonDocView(body);
-    cursor_id = response.cursor_id();
-    hasMore = response.cursor_id() != 0;
+    response.mutable_sections()->swap(body);
+    bsoncxx::document::view view = GetViewFromRawBody(body);
+
     initialized = true;
 }
 
@@ -199,7 +207,7 @@ void Cursor::get_next_batch() {
         return;
     }
     body = response.message();
-    docs = DeSerializeBsonDocView(body);
+    docs = DeSerializeBsonDocView(body.c_str() + 1);
     hasMore = response.cursor_id() != 0;
 }
 
