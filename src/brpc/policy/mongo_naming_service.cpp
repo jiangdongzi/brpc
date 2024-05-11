@@ -69,7 +69,6 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
 
     bsoncxx::builder::basic::document document{};
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
-    auto v = document.view();
     std::string sections;
     sections += '\0';
     sections.append((char*)document.view().data(), document.view().length());
