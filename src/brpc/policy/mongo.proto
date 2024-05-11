@@ -63,6 +63,7 @@ message MongoResponse {
     required int32 starting_from = 4;
     required int32 number_returned = 5;
     required string message = 6;
+    optional int32 section_type = 7;
 }
 
 service MongoService {

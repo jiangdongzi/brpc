@@ -411,6 +411,9 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     // const int64_t start_parse_us = butil::cpuwide_time_us();
     DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
 
+    char buf[sizeof(mongo_head_t)];
+    const char *p = (const char *)msg->meta.fetch(buf, sizeof(buf));
+    const mongo_head_t *header = (const mongo_head_t*)p;
     Socket* socket = msg->socket();
     const bthread_id_t cid = {socket->correlation_id()};
     Controller* cntl = NULL;
@@ -425,15 +428,29 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     ControllerPrivateAccessor accessor(cntl);
     MongoResponse res;
     auto& payload = msg->payload;
-    constexpr int body_header_len = sizeof(int32_t) * 3 + sizeof(int64_t);
-    char body_header[body_header_len];
-    payload.cutn(body_header, body_header_len);
-    res.set_response_flags(*(int32_t*)body_header);
-    res.set_cursor_id(*(int64_t*)(body_header + sizeof(int32_t)));
-    res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
-    res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
-    res.set_message(payload.to_string());
-    LOG(INFO) << "response: " << res.ShortDebugString();
+    if (header->op_code == OPREPLY) {
+        constexpr int body_header_len = sizeof(int32_t) * 3 + sizeof(int64_t);
+        char body_header[body_header_len];
+        payload.cutn(body_header, body_header_len);
+        res.set_response_flags(*(int32_t*)body_header);
+        res.set_cursor_id(*(int64_t*)(body_header + sizeof(int32_t)));
+        res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
+        res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
+        res.set_message(payload.to_string());
+        LOG(INFO) << "response: " << res.ShortDebugString();
+
+    } else if (header->op_code == OP_MSG) {
+        constexpr int body_header_len = sizeof(int32_t) * 3 + sizeof(int64_t);
+        char body_header[body_header_len];
+        payload.cutn(body_header, body_header_len);
+        res.set_response_flags(*(int32_t*)body_header);
+        res.set_cursor_id(*(int64_t*)(body_header + sizeof(int32_t)));
+        res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
+        res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
+        res.set_message(payload.to_string());
+    } else {
+        LOG(INFO) << "invalid op_code: " << header->op_code;
+    }
     res.Swap((MongoResponse*)cntl->response());
 
     const int saved_error = cntl->ErrorCode();
