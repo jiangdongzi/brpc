@@ -35,6 +35,7 @@ enum MongoOpCode {
     MONGO_OPCODE_GET_MORE      = 2005,
     MONGO_OPCODE_DELETE        = 2006,
     MONGO_OPCODE_KILL_CURSORS  = 2007,
+    MONGO_OPCODE_OP_MSG        = 2013,
 };
 
 inline bool is_mongo_opcode(int32_t op_code) {
@@ -47,6 +48,7 @@ inline bool is_mongo_opcode(int32_t op_code) {
     case MONGO_OPCODE_GET_MORE:      return true; 
     case MONGO_OPCODE_DELETE:        return true; 
     case MONGO_OPCODE_KILL_CURSORS : return true;
+    case MONGO_OPCODE_OP_MSG : return true;
     }
     return false;
 }

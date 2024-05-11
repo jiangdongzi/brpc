@@ -146,7 +146,7 @@ namespace mongo {
         brpc::ChannelOptions options;
         options.protocol = brpc::PROTOCOL_MONGO;
         std::string lb_with_ns_url = "ms:" + mongo_uri;
-        if (channel_up->Init(mongo_uri.c_str(), lb_with_ns_url.c_str(), &options) != 0) {
+        if (channel_up->Init("0.0.0.0:7017", &options) != 0) {
             LOG(ERROR) << "Fail to initialize channel";
             throw std::runtime_error("Fail to initialize channel");
         }
@@ -185,7 +185,7 @@ void Cursor::get_first_batch() {
     sections.append((char*)doc.view().data(), doc.view().length());
 
     request.set_sections(sections);
-    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     cntl.set_request_code(request_code);
     chan->CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {

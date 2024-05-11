@@ -338,7 +338,7 @@ void SerializeMongoRequest(butil::IOBuf* buf,
         case OP_MSG:
         {
             mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + 1 + req->sections().size()),
+                (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + req->sections().size()),
                 1,
                 0,
                 OP_MSG
