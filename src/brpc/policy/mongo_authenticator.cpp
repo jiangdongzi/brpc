@@ -92,20 +92,21 @@ static bsoncxx::document::view GetView(const uint8_t* data, size_t length) {
     return view;
 }
 
-static std::string GetPayload(const uint8_t* data, size_t length) {
-    bsoncxx::document::view view = GetView(data, length);
+static std::string GetPayload(const std::string& data) {
+    bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(data);
     auto v = view["payload"].get_binary();
     std::string ret((const char*)v.bytes, v.size);
     return ret;
 }
 
-bool IsDone(const uint8_t* data, size_t length) {
-    bsoncxx::document::view view = GetView(data, length);
+bool IsDone(const std::string& data) {
+    bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(data);
     return view["done"].get_bool().value;
 }
 
-int GetConversationId (const uint8_t* data, size_t length) {
-    bsoncxx::document::view view = GetView(data, length);
+int GetConversationId (const std::string& data) {
+    bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(data);
+    return view["done"].get_bool().value;
     return view["conversationId"].get_int32().value;
 }
 
@@ -135,8 +136,6 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
     command.append(bsoncxx::builder::basic::kvp("$db", database));
 
-    bsoncxx::document::view_or_value view = command.view();
-
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
@@ -152,18 +151,17 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     }
 
     // bsoncxx::builder::stream::document document{};
-    auto v = command.view();
-    request.set_message((char*)v.data(), v.length());
+    butil::mongo::AddDoc2Request(command, &request);
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return -1;
     }
-    first_payload_str = GetPayload((const uint8_t*)response.message().c_str(), response.message().size());
+    first_payload_str = GetPayload(request.sections());
     sscanf(first_payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
     LOG(INFO) << "r: " << r << ", s: " << s << ", i: " << i;
-    conv_id = GetConversationId((const uint8_t*)response.message().c_str(), response.message().size());
+    conv_id = GetConversationId(request.sections());
 
     //second step
     std::string tmp = user_name + ":mongo:" + password;
