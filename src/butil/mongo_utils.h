@@ -68,13 +68,11 @@ public:
                     it = cursor->docs.begin();
                 } else {
                     cursor = nullptr;
-                    v = bsoncxx::document::view();
                     return *this;
                 }
             } else if (!cursor->hasMore && it == cursor->docs.end()) {
                 cursor = nullptr;
             }
-            v = it->get_document().view();
             return *this;
         }
 
@@ -88,12 +86,11 @@ public:
         }
 
         bsoncxx::document::view operator*() {
-            return v;
+            return it->get_document().view();
         }
 
     private:
         Cursor* cursor;
-        bsoncxx::document::view v;
         bsoncxx::document::view::iterator it;
     };
 
