@@ -70,49 +70,49 @@ SendMongoResponse::~SendMongoResponse() {
 }
 
 void SendMongoResponse::Run() {
-    std::unique_ptr<SendMongoResponse> delete_self(this);
-    ConcurrencyRemover concurrency_remover(status, &cntl, received_us);
-    Socket* socket = ControllerPrivateAccessor(&cntl).get_sending_socket();
+    // std::unique_ptr<SendMongoResponse> delete_self(this);
+    // ConcurrencyRemover concurrency_remover(status, &cntl, received_us);
+    // Socket* socket = ControllerPrivateAccessor(&cntl).get_sending_socket();
 
-    if (cntl.IsCloseConnection()) {
-        socket->SetFailed();
-        return;
-    }
+    // if (cntl.IsCloseConnection()) {
+    //     socket->SetFailed();
+    //     return;
+    // }
     
-    const MongoServiceAdaptor* adaptor =
-            server->options().mongo_service_adaptor;
-    butil::IOBuf res_buf;
-    if (cntl.Failed()) {
-        adaptor->SerializeError(res.header().response_to(), &res_buf);
-    } else if (res.has_message()) {
-        mongo_head_t header = {
-            res.header().message_length(),
-            res.header().request_id(),
-            res.header().response_to(),
-            res.header().op_code()
-        };
-        res_buf.append(static_cast<const void*>(&header), sizeof(mongo_head_t));
-        int32_t response_flags = res.response_flags();
-        int64_t cursor_id = res.cursor_id();
-        int32_t starting_from = res.starting_from();
-        int32_t number_returned = res.number_returned();
-        res_buf.append(&response_flags, sizeof(response_flags));
-        res_buf.append(&cursor_id, sizeof(cursor_id));
-        res_buf.append(&starting_from, sizeof(starting_from));
-        res_buf.append(&number_returned, sizeof(number_returned));
-        res_buf.append(res.message());
-    }
+    // const MongoServiceAdaptor* adaptor =
+    //         server->options().mongo_service_adaptor;
+    // butil::IOBuf res_buf;
+    // if (cntl.Failed()) {
+    //     adaptor->SerializeError(res.header().response_to(), &res_buf);
+    // } else if (res.has_message()) {
+    //     mongo_head_t header = {
+    //         res.header().message_length(),
+    //         res.header().request_id(),
+    //         res.header().response_to(),
+    //         res.header().op_code()
+    //     };
+    //     res_buf.append(static_cast<const void*>(&header), sizeof(mongo_head_t));
+    //     int32_t response_flags = res.response_flags();
+    //     int64_t cursor_id = res.cursor_id();
+    //     int32_t starting_from = res.starting_from();
+    //     int32_t number_returned = res.number_returned();
+    //     res_buf.append(&response_flags, sizeof(response_flags));
+    //     res_buf.append(&cursor_id, sizeof(cursor_id));
+    //     res_buf.append(&starting_from, sizeof(starting_from));
+    //     res_buf.append(&number_returned, sizeof(number_returned));
+    //     res_buf.append(res.message());
+    // }
 
-    if (!res_buf.empty()) {
-        // Have the risk of unlimited pending responses, in which case, tell
-        // users to set max_concurrency.
-        Socket::WriteOptions wopt;
-        wopt.ignore_eovercrowded = true;
-        if (socket->Write(&res_buf, &wopt) != 0) {
-            PLOG(WARNING) << "Fail to write into " << *socket;
-            return;
-        }
-    }
+    // if (!res_buf.empty()) {
+    //     // Have the risk of unlimited pending responses, in which case, tell
+    //     // users to set max_concurrency.
+    //     Socket::WriteOptions wopt;
+    //     wopt.ignore_eovercrowded = true;
+    //     if (socket->Write(&res_buf, &wopt) != 0) {
+    //         PLOG(WARNING) << "Fail to write into " << *socket;
+    //         return;
+    //     }
+    // }
 }
 
 ParseResult ParseMongoMessage(butil::IOBuf* source,
