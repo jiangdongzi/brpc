@@ -144,6 +144,8 @@ bsoncxx::document::view GetViewFromRawBody(const std::string& body);
 
 void AddDoc2Request(const bsoncxx::builder::basic::document& doc, brpc::policy::MongoRequest* request);
 
+std::string RemoveMongoDBPrefix(const std::string& url);
+
 } // namespace mongo
 
 

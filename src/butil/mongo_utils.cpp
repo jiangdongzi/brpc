@@ -31,7 +31,8 @@ static void parse_options(const std::string& options_string, std::unordered_map<
     }
 }
 
-MongoDBUri parse_mongo_uri(const std::string& uri) {
+MongoDBUri parse_mongo_uri(const std::string& input_uri) {
+    const std::string uri = butil::mongo::RemoveMongoDBPrefix(input_uri);
     MongoDBUri result;
 
     size_t at_sign = uri.rfind('@');
@@ -236,6 +237,17 @@ static std::string BuildSections (const bsoncxx::builder::basic::document& doc) 
 void AddDoc2Request(const bsoncxx::builder::basic::document& doc, brpc::policy::MongoRequest* request) {
     std::string sections = BuildSections(doc);
     request->set_sections(std::move(sections));
+}
+
+std::string RemoveMongoDBPrefix(const std::string& url) {
+    const std::string prefix = "mongodb://";
+    // Check if the prefix exists at the beginning of the URL
+    if (url.substr(0, prefix.size()) == prefix) {
+        // If yes, return the substring that comes after the prefix
+        return url.substr(prefix.size());
+    }
+    // If no prefix, return the original URL
+    return url;
 }
 
 } // namespace mongo
