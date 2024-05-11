@@ -21,6 +21,7 @@
 #include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
 #include <mutex>
+#include "brpc/errno.pb.h"
 #include "butil/time.h" 
 #include "butil/iobuf.h"                         // butil::IOBuf
 #include "brpc/controller.h"               // Controller
@@ -440,14 +441,13 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
         LOG(INFO) << "response: " << res.ShortDebugString();
 
     } else if (header->op_code == OP_MSG) {
-        constexpr int body_header_len = sizeof(uint32_t) * 3 + sizeof(char);
-        char body_header[body_header_len];
-        payload.cutn(body_header, body_header_len);
-        res.set_response_flags(*(int32_t*)body_header);
-        res.set_section_type(*(char*)(body_header + sizeof(int32_t)));
+        uint32_t flags;
+        payload.cutn(&flags, 4);
+        res.set_response_flags(flags);
         res.set_message(payload.to_string());
     } else {
         LOG(INFO) << "invalid op_code: " << header->op_code;
+        cntl->SetFailed(ERESPONSE, "invalid op_code: %d", header->op_code);
     }
     res.Swap((MongoResponse*)cntl->response());
 
