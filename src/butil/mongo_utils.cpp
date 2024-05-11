@@ -183,7 +183,6 @@ void Cursor::get_first_batch() {
     doc.append(bsoncxx::builder::basic::kvp("find", collection->name));
     doc.append(bsoncxx::builder::basic::kvp("filter", collection->filter));
     doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
-    doc.append(bsoncxx::builder::basic::kvp("batchSize", 1));
     sections.append((char*)doc.view().data(), doc.view().length());
 
     request.set_sections(sections);
@@ -221,7 +220,6 @@ void Cursor::get_next_batch() {
     doc.append(bsoncxx::builder::basic::kvp("getMore", cursor_id));
     doc.append(bsoncxx::builder::basic::kvp("collection", collection->name));
     doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
-    doc.append(bsoncxx::builder::basic::kvp("batchSize", 2));
     sections.append((char*)doc.view().data(), doc.view().length());
 
     request.set_sections(sections);

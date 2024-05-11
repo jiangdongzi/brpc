@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
     // Channel is thread-safe and can be shared by all threads in your program.
 
     butil::mongo::Client client(FLAGS_server);
-    auto col = client["test"]["test"];
+    auto col = client["myDatabase"]["test"];
     bsoncxx::builder::basic::document doc;
     auto views = col.find(doc.view());
     for (auto&& view : views) {
