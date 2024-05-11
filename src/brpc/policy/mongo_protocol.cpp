@@ -438,8 +438,6 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
         res.set_starting_from(*(int32_t*)(body_header + sizeof(int32_t) + sizeof(int64_t)));
         res.set_number_returned(*(int32_t*)(body_header + sizeof(int32_t) * 2 + sizeof(int64_t)));
         res.set_message(payload.to_string());
-        LOG(INFO) << "response: " << res.ShortDebugString();
-
     } else if (header->op_code == OP_MSG) {
         uint32_t flags;
         payload.cutn(&flags, 4);
@@ -450,6 +448,7 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
         cntl->SetFailed(ERESPONSE, "invalid op_code: %d", header->op_code);
     }
     res.Swap((MongoResponse*)cntl->response());
+    LOG(INFO) << "response: " << res.ShortDebugString();
 
     const int saved_error = cntl->ErrorCode();
     // Unlocks correlation_id inside. Revert controller's
