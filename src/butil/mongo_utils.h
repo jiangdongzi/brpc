@@ -41,7 +41,6 @@ bool ReadSlavePreferred (const uint64_t request_code);
 uint64_t GetRandomSlavePreferredRequestCode();
 
 std::string SerializeBsonDocView(const bsoncxx::builder::basic::document& doc);
-std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& str);
 
 namespace mongo {
 class Client;

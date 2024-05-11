@@ -101,27 +101,6 @@ uint64_t GetRandomSlavePreferredRequestCode() {
     return GetRandomRequestCode(MONGOC_READ_SLAVE_PREFERRED);
 }
 
-std::vector<bsoncxx::document::view> DeSerializeBsonDocView(const std::string& str)  {
-    std::vector<bsoncxx::document::view> result;
-    size_t offset = 0;
-    const uint8_t* data = (const uint8_t*)str.c_str();
-    const size_t length = str.length();
-    while (offset < length) {
-        // 假设文档长度存储在前四个字节
-        uint32_t doc_length = *reinterpret_cast<const uint32_t*>(data + offset);
-
-        // 创建 BSON 视图
-        bsoncxx::document::view view(data + offset, doc_length);
-        
-        // 将 BSON 转换为 JSON 并输出
-        result.emplace_back(view);
-        
-        // 移动偏移量到下一个文档的起始位置
-        offset += doc_length;
-    }
-    return result;
-}
-
 namespace mongo {
 
 bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
