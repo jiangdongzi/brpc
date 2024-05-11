@@ -45,6 +45,7 @@ namespace policy {
 MongoNamingService::MongoNamingService() = default;
 
 static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::string& host) {
+    #if 0
     brpc::Channel channel;
     const butil::MongoDBUri mongo_uri = butil::parse_mongo_uri(mongo_uri_str);
     
@@ -81,6 +82,8 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
     }
     LOG(INFO) << "response_flags: " << response.response_flags();
     return response.message();
+    #endif
+    return "";
 }
 
 std::vector<std::string> ResolveHostsToIPPort(const std::vector<std::string>& hosts) {

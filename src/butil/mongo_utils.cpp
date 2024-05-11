@@ -177,7 +177,13 @@ void Cursor::get_first_batch() {
     brpc::Controller cntl;
     std::string sections;
     sections += '\0';
-    sections.append((char*)collection->filter.view().data(), collection->filter.view().length());
+    // sections.append((char*)collection->filter.view().data(), collection->filter.view().length());
+    bsoncxx::builder::basic::document doc;
+    doc.append(bsoncxx::builder::basic::kvp("find", collection->name));
+    doc.append(bsoncxx::builder::basic::kvp("filter", collection->filter));
+    doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
+    sections.append((char*)doc.view().data(), doc.view().length());
+
     request.set_sections(sections);
     request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
     cntl.set_request_code(request_code);
@@ -188,6 +194,16 @@ void Cursor::get_first_batch() {
     }
     response.mutable_sections()->swap(body);
     bsoncxx::document::view view = GetViewFromRawBody(body);
+    LOG(INFO) << "view: " << bsoncxx::to_json(view);
+    auto cursor_info = view["cursor"];
+    bool ok = cursor_info["ok"].get_double() == 1.0;
+    if (!ok) {
+        LOG(ERROR) << "not ok: " << cursor_info["ok"].get_double();
+        return;
+    }
+    cursor_id = cursor_info["id"].get_int64();
+    hasMore = cursor_id != 0;
+    docs = cursor_info["firstBatch"].get_array().value;
 
     initialized = true;
 }
@@ -196,19 +212,19 @@ void Cursor::get_next_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    request.set_full_collection_name(full_collection_name);
-    request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
-    request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
-    request.set_cursor_id(cursor_id);
-    cntl.set_request_code(request_code);
-    chan->CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
-        return;
-    }
-    body = response.message();
-    docs = DeSerializeBsonDocView(body.c_str() + 1);
-    hasMore = response.cursor_id() != 0;
+    // request.set_full_collection_name(full_collection_name);
+    // request.set_message(butil::SerializeBsonDocView(collection->filter.view()));
+    // request.mutable_header()->set_op_code(brpc::policy::DB_GETMORE);
+    // request.set_cursor_id(cursor_id);
+    // cntl.set_request_code(request_code);
+    // chan->CallMethod(NULL, &cntl, &request, &response, NULL);
+    // if (cntl.Failed()) {
+    //     LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+    //     return;
+    // }
+    // body = response.message();
+    // docs = DeSerializeBsonDocView(body.c_str() + 1);
+    // hasMore = response.cursor_id() != 0;
 }
 
 Collection::Collection (const std::string& collection_name, Database* const db) {

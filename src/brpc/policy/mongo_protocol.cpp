@@ -269,7 +269,7 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
         
         mongo_done->cntl.set_log_id(header->request_id);
         const std::string &body_str = msg->payload.to_string();
-        mongo_done->req.set_message(body_str.c_str(), body_str.size());
+        mongo_done->req.set_sections(body_str.c_str(), body_str.size());
         mongo_done->req.mutable_header()->set_message_length(header->message_length);
         mongo_done->req.mutable_header()->set_request_id(header->request_id);
         mongo_done->req.mutable_header()->set_response_to(header->response_to);
@@ -333,64 +333,21 @@ void SerializeMongoRequest(butil::IOBuf* buf,
     const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
 
     LOG(INFO) << "request: " << req->ShortDebugString();
-    std::string full_collection_name = req->full_collection_name();
-    full_collection_name += '\0';
 
     switch (req->header().op_code()) {
-        case DB_QUERY:
-        {
-            mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + full_collection_name.size() + 3 * sizeof(int32_t) + req->message().size()),
-                1,
-                0,
-                DB_QUERY
-            };
-            LOG(INFO) << "header: " << header;
-            buf->append(&header, sizeof(header));
-            int flags = req->flags();
-            buf->append(&flags, sizeof(flags));
-            buf->append(full_collection_name);
-            int number_to_skip = req->number_to_skip();
-            int number_to_return = req->number_to_return();
-            buf->append(&number_to_skip, sizeof(number_to_skip));
-            buf->append(&number_to_return, sizeof(number_to_return));
-            buf->append(req->message());
-            break;
-        }
-        case DB_GETMORE:
-        {
-            mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + full_collection_name.size() + 2 * sizeof(int32_t) + sizeof(int64_t)),
-                1,
-                0,
-                DB_GETMORE
-            };
-            LOG(INFO) << "header: " << header;
-            buf->append(&header, sizeof(header));
-            const int zero = 0;
-            buf->append(&zero, sizeof(zero));
-            buf->append(full_collection_name);
-            const int number_to_return = req->number_to_return();
-            buf->append(&number_to_return, sizeof(number_to_return));
-            const int64_t cursor_id = req->cursor_id();
-            buf->append(&cursor_id, sizeof(cursor_id));
-            break;
-        }
         case OP_MSG:
         {
             mongo_head_t header = {
-                (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + 1 + req->message().size()),
+                (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + 1 + req->sections().size()),
                 1,
                 0,
                 OP_MSG
             };
             LOG(INFO) << "header: " << header;
             buf->append(&header, sizeof(header));
-            const int flags = req->flags();
+            const int flags = req->flag_bits();
             buf->append(&flags, sizeof(flags));
-            const int8_t section_type = req->section_type();
-            buf->append(&section_type, sizeof(section_type));
-            buf->append(req->message());
+            buf->append(req->sections());
             break;
         }
         case OPREPLY:
@@ -432,8 +389,8 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
     if (header->op_code == OP_MSG) {
         uint32_t flags;
         payload.cutn(&flags, 4);
-        res.set_response_flags(flags);
-        res.set_message(payload.to_string());
+        res.set_flag_bits(flags);
+        res.set_sections(payload.to_string());
     } else {
         LOG(INFO) << "invalid op_code: " << header->op_code;
         cntl->SetFailed(ERESPONSE, "invalid op_code: %d", header->op_code);

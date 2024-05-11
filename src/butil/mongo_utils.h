@@ -58,14 +58,14 @@ public:
     // 内部迭代器类
     class Iterator {
     public:
-        Iterator(Cursor* cursor, size_t pos) : cursor(cursor), position(pos) {}
+        Iterator(Cursor* cursor) : cursor(cursor) {}
 
         Iterator& operator++() {
-            position++;
-            if (position >= cursor->docs.size() && cursor->hasMore) {
+            it++;
+            if (it == cursor->docs.end() && cursor->hasMore) {
                 cursor->get_next_batch();
-                position = 0; // 重置位置到新批次的开始
-            } else if (!cursor->hasMore && position >= cursor->docs.size()) {
+                it = cursor->docs.begin();
+            } else if (!cursor->hasMore && it == cursor->docs.end()) {
                 cursor = nullptr;
             }
             return *this;
@@ -77,16 +77,16 @@ public:
 
         bool operator==(const Iterator& other) const {
             // return position != other.position || cursor != other.cursor;
-            return (cursor == nullptr && other.cursor == nullptr) || (position == other.position && cursor == other.cursor);
+            return (cursor == nullptr && other.cursor == nullptr) || (it == other.it && cursor == other.cursor);
         }
 
-        const bsoncxx::document::view& operator*() const {
-            return cursor->docs[position];
+        bsoncxx::document::view operator*() {
+            return it->get_document().view();
         }
 
     private:
         Cursor* cursor;
-        size_t position;
+        bsoncxx::document::view::iterator it;
     };
 
     // 提供迭代器的开始和结束
@@ -94,17 +94,17 @@ public:
         if (!initialized) {
             get_first_batch();
         }
-        return Iterator(this, 0);
+        return Iterator(this);
     }
 
     Iterator end() {
-        return Iterator(nullptr, docs.size());
+        return Iterator(nullptr);
     }
 
 private:
     void get_first_batch();
     void get_next_batch();
-    std::vector<bsoncxx::document::view> docs;
+    bsoncxx::document::view docs;
     std::string body;
     bool hasMore{}; // 标志是否还有更多数据可获取
     bool initialized{}; // 标志是否已经初始化
