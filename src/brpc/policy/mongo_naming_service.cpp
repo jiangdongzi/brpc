@@ -76,7 +76,7 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+        LOG(ERROR) << "Fail to access mongodb, " << cntl.ErrorText();
         return "";
     }
     LOG(INFO) << "response_flags: " << response.flag_bits();

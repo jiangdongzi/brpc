@@ -86,6 +86,7 @@ static void AppendBinary(bsoncxx::builder::basic::document& builder,
 
 static std::string GetPayload(const std::string& data) {
     bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(data);
+    LOG(INFO) << bsoncxx::to_json(view);
     auto v = view["payload"].get_binary();
     std::string ret((const char*)v.bytes, v.size);
     return ret;
@@ -144,16 +145,16 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
 
     // bsoncxx::builder::stream::document document{};
     butil::mongo::AddDoc2Request(command, &request);
-    request.mutable_header()->set_op_code(brpc::policy::DB_QUERY);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
         return -1;
     }
-    first_payload_str = GetPayload(request.sections());
+    first_payload_str = GetPayload(response.sections());
     sscanf(first_payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
     LOG(INFO) << "r: " << r << ", s: " << s << ", i: " << i;
-    conv_id = GetConversationId(request.sections());
+    conv_id = GetConversationId(response.sections());
 
     //second step
     std::string tmp = user_name + ":mongo:" + password;
