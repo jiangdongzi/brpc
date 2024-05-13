@@ -146,7 +146,6 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
         return -1;
     }
 
-    // bsoncxx::builder::stream::document document{};
     butil::mongo::AddDoc2Request(command, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     channel.CallMethod(NULL, &cntl, &request, &response, NULL);
