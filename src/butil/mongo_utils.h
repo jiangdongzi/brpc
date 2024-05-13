@@ -1,6 +1,5 @@
 #include "brpc/channel.h"
 #include "brpc/policy/mongo.pb.h"
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -68,7 +67,6 @@ public:
         }
 
         bool operator==(const Iterator& other) const {
-            // return position != other.position || cursor != other.cursor;
             return (cursor == nullptr && other.cursor == nullptr) || (it == other.it && cursor == other.cursor);
         }
 

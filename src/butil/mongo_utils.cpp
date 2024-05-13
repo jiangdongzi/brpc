@@ -144,7 +144,6 @@ void Cursor::get_first_batch() {
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
-    // sections.append((char*)collection->filter.view().data(), collection->filter.view().length());
     bsoncxx::builder::basic::document doc;
     doc.append(bsoncxx::builder::basic::kvp("find", collection->name));
     doc.append(bsoncxx::builder::basic::kvp("filter", collection->filter));
@@ -177,7 +176,6 @@ void Cursor::get_next_batch() {
     brpc::policy::MongoRequest request;
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    // sections.append((char*)collection->filter.view().data(), collection->filter.view().length());
     bsoncxx::builder::basic::document doc;
     doc.append(bsoncxx::builder::basic::kvp("getMore", cursor_id));
     doc.append(bsoncxx::builder::basic::kvp("collection", collection->name));
