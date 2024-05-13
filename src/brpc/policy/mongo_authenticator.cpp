@@ -99,7 +99,6 @@ bool IsDone(const std::string& data) {
 
 int GetConversationId (const std::string& data) {
     bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(data);
-    return view["done"].get_bool().value;
     return view["conversationId"].get_int32().value;
 }
 
