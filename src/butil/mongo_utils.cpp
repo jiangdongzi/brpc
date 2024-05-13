@@ -1,9 +1,9 @@
 #include "mongo_utils.h"
 #include "brpc/policy/mongo.pb.h"
 #include "butil/fast_rand.h"
-#include "output/include/brpc/channel.h"
-#include "output/include/butil/containers/flat_map.h"
-#include "output/include/butil/logging.h"
+#include "brpc/channel.h"
+#include "butil/logging.h"
+#include "brpc/policy/mongo_authenticator.h"
 #include <climits>
 #include <cstdint>
 #include <memory>
@@ -111,6 +111,9 @@ brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
     brpc::ChannelOptions options;
     options.protocol = brpc::PROTOCOL_MONGO;
     std::string lb_with_ns_url = "ms:" + mongo_uri;
+    if (need_auth_mongo(mongo_uri)) {
+        options.auth = new brpc::policy::MongoAuthenticator(mongo_uri);
+    }
     if (channel_up->Init(mongo_uri.c_str(), lb_with_ns_url.c_str(), &options) != 0) {
         LOG(ERROR) << "Fail to initialize channel";
         throw std::runtime_error("Fail to initialize channel");
