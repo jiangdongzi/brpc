@@ -76,6 +76,10 @@ public:
             return it->get_document().view();
         }
 
+        bsoncxx::document::view::iterator operator->() {
+            return it;
+        }
+
     private:
         Cursor* cursor;
         bsoncxx::document::view::iterator it;
