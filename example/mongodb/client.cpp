@@ -73,8 +73,19 @@ int main(int argc, char* argv[]) {
     //     std::cout << "ivyjxj::" << bsoncxx::to_json(view) << std::endl;
     // }
     using namespace bsoncxx::builder::basic;
-    auto doc_to_insert = make_document(kvp("name", "ivyjxjhelloo"), kvp("age", 30));
-    col.async_insert_one(doc_to_insert.view());
+    bsoncxx::builder::basic::document query{};
+    query.append(bsoncxx::builder::basic::kvp("name", "ivyjxjhelloo"));
+
+    // 构建更新操作
+    bsoncxx::builder::basic::document update{};
+    update.append(bsoncxx::builder::basic::kvp("$set", 
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("age", 567)
+                )));
+    butil::mongo::options::update opt{};
+    // opt.upsert = true;
+    opt.multi = true;
+    col.async_update_one(query.view(), update.view());
     bthread_usleep(1000 * 1000 * 10);
     return 0;
 }
