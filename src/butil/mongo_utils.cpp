@@ -301,5 +301,20 @@ void Collection::async_insert_one(bsoncxx::document::view_or_value doc, const op
     database->client->channel->CallMethod(NULL, cntl, &request, response, done);
 }
 
+brpc::policy::MongoRequest Collection::create_update_requet(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,
+        const options::update& opts) {
+    using namespace bsoncxx::builder::basic;
+    document update_doc;
+    update_doc.append(kvp("update", name));
+    update_doc.append(kvp("updates", make_array(
+        make_document(kvp("q", filter), kvp("u", update), kvp("multi", opts.multi), kvp("upsert", opts.upsert))
+    )));
+    update_doc.append(kvp("$db", database->name));
+    brpc::policy::MongoRequest request;
+    AddDoc2Request(update_doc, &request);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
+    return request;
+}
+
 } // namespace mongo
 } // namespace butil

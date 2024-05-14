@@ -44,6 +44,7 @@ namespace mongo {
 namespace options {
 struct update {
     bool upsert = false;
+    bool multi = false;
 };
 
 struct insert {
@@ -129,6 +130,8 @@ public:
     void async_insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
 private:
     brpc::policy::MongoRequest create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
+    brpc::policy::MongoRequest create_update_requet(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,
+        const options::update& opts = options::update());
 };
 
 class Database {
