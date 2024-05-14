@@ -67,10 +67,13 @@ int main(int argc, char* argv[]) {
 
     butil::mongo::Client client(FLAGS_server);
     auto col = client["myDatabase"]["test"];
-    bsoncxx::builder::basic::document doc;
-    auto views = col.find(doc.view());
-    for (auto&& view : views) {
-        std::cout << "ivyjxj::" << bsoncxx::to_json(view) << std::endl;
-    }
+    // bsoncxx::builder::basic::document doc;
+    // auto views = col.find(doc.view());
+    // for (auto&& view : views) {
+    //     std::cout << "ivyjxj::" << bsoncxx::to_json(view) << std::endl;
+    // }
+    using namespace bsoncxx::builder::basic;
+    auto doc_to_insert = make_document(kvp("name", "ivyjxjhelloo"), kvp("age", 30));
+    col.insert_one(doc_to_insert.view());
     return 0;
 }
