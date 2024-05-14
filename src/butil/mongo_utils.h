@@ -40,6 +40,18 @@ uint64_t GetRandomRequestCode (const uint64_t flag);
 std::string SerializeBsonDocView(const bsoncxx::builder::basic::document& doc);
 
 namespace mongo {
+
+namespace options {
+struct update {
+    bool upsert = false;
+};
+
+struct insert {
+    bool ordered = false;
+};
+
+} // namespace options
+
 class Client;
 class Database;
 class Collection;
@@ -113,6 +125,7 @@ public:
     // Database* database;
     std::unique_ptr<Database> database;
     bsoncxx::document::view_or_value filter;
+    void insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
 };
 
 class Database {

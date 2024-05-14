@@ -13,6 +13,7 @@
 #include <bsoncxx/json.hpp>
 #include <string>
 #include <unordered_map>
+#include <bsoncxx/builder/basic/array.hpp>
 
 namespace butil {
 
@@ -248,6 +249,28 @@ std::string RemoveMongoDBPrefix(const std::string& url) {
     }
     // If no prefix, return the original URL
     return url;
+}
+void Collection::insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts) {
+    using namespace bsoncxx::builder::basic;
+
+    brpc::policy::MongoRequest request;
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    document insert_doc;
+    insert_doc.append(kvp("insert", name));
+    insert_doc.append(kvp("documents", make_array(doc)));
+    insert_doc.append(kvp("$db", database->name));
+    insert_doc.append(kvp("ordered", opts.ordered));
+    AddDoc2Request(insert_doc, &request);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
+    cntl.set_request_code(butil::GetRandomRequestCode(0));
+    database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return;
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
+    LOG(INFO) << "view: " << bsoncxx::to_json(view);
 }
 
 } // namespace mongo
