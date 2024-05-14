@@ -259,7 +259,7 @@ bsoncxx::document::value Collection::insert_one(bsoncxx::document::view_or_value
     database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
-        return make_document(kvp("n", "0"), kvp("ok", 0.0));
+        return make_document(kvp("n", "0"), kvp("ok", 0.0), kvp("err", cntl.ErrorText()));
     }
     bsoncxx::document::view view = GetViewFromRawBody(response.sections());
     LOG(INFO) << "view: " << bsoncxx::to_json(view);
