@@ -266,6 +266,17 @@ bsoncxx::document::value Collection::insert_one(bsoncxx::document::view_or_value
     return bsoncxx::document::value(view);
 }
 
+static void LOGMongoResponse(brpc::Controller* cntl, brpc::policy::MongoResponse* response) {
+    std::unique_ptr<brpc::Controller> cntl_guard(cntl);
+    std::unique_ptr<brpc::policy::MongoResponse> response_guard(response);
+    if (cntl->Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl->ErrorText();
+        return;
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response->sections());
+    LOG(INFO) << "view: " << bsoncxx::to_json(view);
+}
+
 brpc::policy::MongoRequest Collection::create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts) {
     using namespace bsoncxx::builder::basic;
     document insert_doc;
@@ -277,6 +288,16 @@ brpc::policy::MongoRequest Collection::create_insert_requet(const bsoncxx::docum
     AddDoc2Request(insert_doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     return request;
+}
+
+void Collection::async_insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts) {
+    using namespace bsoncxx::builder::basic;
+    brpc::policy::MongoRequest request = create_insert_requet(doc, opts);
+    brpc::policy::MongoResponse* response = new brpc::policy::MongoResponse();
+    brpc::Controller* cntl = new brpc::Controller;
+    google::protobuf::Closure* done = brpc::NewCallback(
+            &LOGMongoResponse, cntl, response);
+    database->client->channel->CallMethod(NULL, cntl, &request, response, done);
 }
 
 } // namespace mongo
