@@ -395,7 +395,7 @@ friend void InitFrameHandlers();
     mutable butil::Mutex _stream_mutex;
     StreamMap _pending_streams;
     butil::atomic<int64_t> _deferred_window_update;
-    int possible_goaway_stream_id;
+    uint32_t possible_goaway_stream_id;
     SocketId raw_socket_id;
 };
 
