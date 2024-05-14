@@ -125,7 +125,10 @@ public:
     // Database* database;
     std::unique_ptr<Database> database;
     bsoncxx::document::view_or_value filter;
-    void insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
+    bsoncxx::document::value insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
+    void async_insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
+private:
+    brpc::policy::MongoRequest create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
 };
 
 class Database {

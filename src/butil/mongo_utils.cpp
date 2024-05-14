@@ -250,27 +250,33 @@ std::string RemoveMongoDBPrefix(const std::string& url) {
     // If no prefix, return the original URL
     return url;
 }
-void Collection::insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts) {
+bsoncxx::document::value Collection::insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts) {
     using namespace bsoncxx::builder::basic;
 
-    brpc::policy::MongoRequest request;
+    brpc::policy::MongoRequest request = create_insert_requet(doc, opts);
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
+    database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return make_document(kvp("n", "0"), kvp("ok", 0.0));
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
+    LOG(INFO) << "view: " << bsoncxx::to_json(view);
+    return bsoncxx::document::value(view);
+}
+
+brpc::policy::MongoRequest Collection::create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts) {
+    using namespace bsoncxx::builder::basic;
     document insert_doc;
     insert_doc.append(kvp("insert", name));
     insert_doc.append(kvp("documents", make_array(doc)));
     insert_doc.append(kvp("$db", database->name));
     insert_doc.append(kvp("ordered", opts.ordered));
+    brpc::policy::MongoRequest request;
     AddDoc2Request(insert_doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
-    cntl.set_request_code(butil::GetRandomRequestCode(0));
-    database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
-        return;
-    }
-    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
-    LOG(INFO) << "view: " << bsoncxx::to_json(view);
+    return request;
 }
 
 } // namespace mongo
