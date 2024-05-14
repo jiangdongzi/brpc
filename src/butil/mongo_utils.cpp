@@ -256,6 +256,7 @@ bsoncxx::document::value Collection::insert_one(bsoncxx::document::view_or_value
     brpc::policy::MongoRequest request = create_insert_requet(doc, opts);
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
+    cntl.set_request_code(GetRandomRequestCode(0));
     database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
@@ -295,6 +296,7 @@ void Collection::async_insert_one(bsoncxx::document::view_or_value doc, const op
     brpc::policy::MongoRequest request = create_insert_requet(doc, opts);
     brpc::policy::MongoResponse* response = new brpc::policy::MongoResponse();
     brpc::Controller* cntl = new brpc::Controller;
+    cntl->set_request_code(GetRandomRequestCode(0));
     google::protobuf::Closure* done = brpc::NewCallback(
             &LOGMongoResponse, cntl, response);
     database->client->channel->CallMethod(NULL, cntl, &request, response, done);

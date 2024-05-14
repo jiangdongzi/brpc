@@ -74,6 +74,7 @@ int main(int argc, char* argv[]) {
     // }
     using namespace bsoncxx::builder::basic;
     auto doc_to_insert = make_document(kvp("name", "ivyjxjhelloo"), kvp("age", 30));
-    col.insert_one(doc_to_insert.view());
+    auto ret = col.insert_one(doc_to_insert.view());
+    LOG(INFO) << "ivyjxj::" << bsoncxx::to_json(ret);
     return 0;
 }
