@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
     // }
     using namespace bsoncxx::builder::basic;
     bsoncxx::builder::basic::document query{};
-    query.append(bsoncxx::builder::basic::kvp("name", "ivyjxjhelloo"));
+    query.append(bsoncxx::builder::basic::kvp("name", "ivyjxjhello"));
 
     // 构建更新操作
     bsoncxx::builder::basic::document update{};
@@ -83,9 +83,9 @@ int main(int argc, char* argv[]) {
                     bsoncxx::builder::basic::kvp("age", 567)
                 )));
     butil::mongo::options::update opt{};
-    // opt.upsert = true;
+    opt.upsert = true;
     opt.multi = true;
-    col.async_update_one(query.view(), update.view());
+    col.async_update_one(query.view(), update.view(), opt);
     bthread_usleep(1000 * 1000 * 10);
     return 0;
 }
