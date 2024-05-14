@@ -316,5 +316,31 @@ brpc::policy::MongoRequest Collection::create_update_requet(bsoncxx::document::v
     return request;
 }
 
+bsoncxx::document::value Collection::update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts) {
+    using namespace bsoncxx::builder::basic;
+    brpc::policy::MongoRequest request = create_update_requet(filter, update, opts);
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    cntl.set_request_code(GetRandomRequestCode(0));
+    database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return make_document(kvp("n", "0"), kvp("ok", 0.0), kvp("err", cntl.ErrorText()));
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
+    return bsoncxx::document::value(view);
+}
+
+void Collection::async_update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts) {
+    using namespace bsoncxx::builder::basic;
+    brpc::policy::MongoRequest request = create_update_requet(filter, update, opts);
+    brpc::policy::MongoResponse* response = new brpc::policy::MongoResponse();
+    brpc::Controller* cntl = new brpc::Controller;
+    cntl->set_request_code(GetRandomRequestCode(0));
+    google::protobuf::Closure* done = brpc::NewCallback(
+            &LOGMongoResponse, cntl, response);
+    database->client->channel->CallMethod(NULL, cntl, &request, response, done);
+}
+
 } // namespace mongo
 } // namespace butil

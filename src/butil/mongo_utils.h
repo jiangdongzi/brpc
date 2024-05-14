@@ -128,6 +128,8 @@ public:
     bsoncxx::document::view_or_value filter;
     bsoncxx::document::value insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
     void async_insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
+    bsoncxx::document::value update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts = options::update());
+    void async_update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts = options::update());
 private:
     brpc::policy::MongoRequest create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
     brpc::policy::MongoRequest create_update_requet(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,
