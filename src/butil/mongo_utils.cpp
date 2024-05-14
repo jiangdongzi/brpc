@@ -263,7 +263,6 @@ bsoncxx::document::value Collection::insert_one(bsoncxx::document::view_or_value
         return make_document(kvp("n", "0"), kvp("ok", 0.0), kvp("err", cntl.ErrorText()));
     }
     bsoncxx::document::view view = GetViewFromRawBody(response.sections());
-    LOG(INFO) << "view: " << bsoncxx::to_json(view);
     return bsoncxx::document::value(view);
 }
 
