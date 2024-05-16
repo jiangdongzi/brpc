@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-namespace butil {
+namespace stdx {
 struct place_t { };
 constexpr place_t place { };
 /* this is the default 'false' case */

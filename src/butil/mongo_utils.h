@@ -1,12 +1,13 @@
 #include "brpc/channel.h"
 #include "brpc/policy/mongo.pb.h"
 #include <cstdint>
-#include <memory>
+#include <butil/optional.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <bsoncxx/types.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/types/bson_value/view_or_value.hpp>
 
 #pragma once
 namespace butil {
@@ -49,6 +50,67 @@ struct update {
 
 struct insert {
     bool ordered = false;
+};
+
+class find {
+   public:
+    find& allow_disk_use(bool allow_disk_use);
+    const stdx::optional<bool>& allow_disk_use() const;
+    find& allow_partial_results(bool allow_partial);
+    const stdx::optional<bool>& allow_partial_results() const;
+    find& batch_size(std::int32_t batch_size);
+    const stdx::optional<std::int32_t>& batch_size() const;
+    find& collation(bsoncxx::v_noabi::document::view_or_value collation);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& collation() const;
+    find& let(bsoncxx::v_noabi::document::view_or_value let);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value> let() const;
+    find& comment_option(bsoncxx::v_noabi::types::bson_value::view_or_value comment);
+    const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& comment_option()
+        const;
+    find& limit(std::int64_t limit);
+    const stdx::optional<std::int64_t>& limit() const;
+    find& max(bsoncxx::v_noabi::document::view_or_value max);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& max() const;
+    find& max_await_time(std::chrono::milliseconds max_await_time);
+    const stdx::optional<std::chrono::milliseconds>& max_await_time() const;
+    find& max_time(std::chrono::milliseconds max_time);
+    const stdx::optional<std::chrono::milliseconds>& max_time() const;
+    find& min(bsoncxx::v_noabi::document::view_or_value min);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& min() const;
+    find& no_cursor_timeout(bool no_cursor_timeout);
+    const stdx::optional<bool>& no_cursor_timeout() const;
+    find& projection(bsoncxx::v_noabi::document::view_or_value projection);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& projection() const;
+    find& read_preference(bsoncxx::v_noabi::document::view_or_value rp);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& read_preference() const;
+    find& return_key(bool return_key);
+    const stdx::optional<bool>& return_key() const;
+    find& show_record_id(bool show_record_id);
+    const stdx::optional<bool>& show_record_id() const;
+    find& skip(std::int64_t skip);
+    const stdx::optional<std::int64_t>& skip() const;
+    find& sort(bsoncxx::v_noabi::document::view_or_value ordering);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& sort() const;
+
+   private:
+    stdx::optional<bool> _allow_disk_use;
+    stdx::optional<bool> _allow_partial_results;
+    stdx::optional<std::int32_t> _batch_size;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _collation;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _let;
+    stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> _comment_option;
+    stdx::optional<std::int64_t> _limit;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _max;
+    stdx::optional<std::chrono::milliseconds> _max_await_time;
+    stdx::optional<std::chrono::milliseconds> _max_time;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _min;
+    stdx::optional<bool> _no_cursor_timeout;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _projection;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _read_preference;
+    stdx::optional<bool> _return_key;
+    stdx::optional<bool> _show_record_id;
+    stdx::optional<std::int64_t> _skip;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _ordering;
 };
 
 } // namespace options
