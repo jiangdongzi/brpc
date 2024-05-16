@@ -82,9 +82,10 @@ int main(int argc, char* argv[]) {
     bsoncxx::builder::basic::document update{};
     update.append(bsoncxx::builder::basic::kvp("$set", 
                 bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("age", 567)
+                    bsoncxx::builder::basic::kvp("age", 527)
                 )));
     butil::mongo::options::update opt_update{};
+    opt_update.upsert(true);
     col.async_update_one(query.view(), update.view(), opt_update);
     bthread_usleep(1000 * 1000 * 10);
     return 0;

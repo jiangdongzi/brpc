@@ -343,7 +343,6 @@ void SerializeMongoRequest(butil::IOBuf* buf,
                 0,
                 OP_MSG
             };
-            LOG(INFO) << "header: " << header;
             buf->append(&header, sizeof(header));
             const int flags = req->flag_bits();
             buf->append(&flags, sizeof(flags));
@@ -395,7 +394,6 @@ void ProcessMongoResponse(InputMessageBase* msg_base) {
         LOG(INFO) << "invalid op_code: " << header->op_code;
         cntl->SetFailed(ERESPONSE, "invalid op_code: %d", header->op_code);
     }
-    LOG(INFO) << "response: " << res.ShortDebugString();
     res.Swap((MongoResponse*)cntl->response());
 
     const int saved_error = cntl->ErrorCode();
