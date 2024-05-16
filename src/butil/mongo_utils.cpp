@@ -254,6 +254,87 @@ const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::read_pref
     return _read_preference;
 }
 
+//update
+update& update::bypass_document_validation(bool bypass_document_validation) {
+    _bypass_document_validation = bypass_document_validation;
+    return *this;
+}
+
+update& update::collation(bsoncxx::v_noabi::document::view_or_value collation) {
+    _collation = std::move(collation);
+    return *this;
+}
+
+update& update::let(bsoncxx::v_noabi::document::view_or_value let) {
+    _let = let;
+    return *this;
+}
+
+update& update::comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment) {
+    _comment = std::move(comment);
+    return *this;
+}
+
+update& update::upsert(bool upsert) {
+    _upsert = upsert;
+    return *this;
+}
+
+const stdx::optional<bool>& update::bypass_document_validation() const {
+    return _bypass_document_validation;
+}
+
+const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& update::collation() const {
+    return _collation;
+}
+
+const stdx::optional<bsoncxx::v_noabi::document::view_or_value> update::let() const {
+    return _let;
+}
+
+const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> update::comment() const {
+    return _comment;
+}
+
+const stdx::optional<bool>& update::upsert() const {
+    return _upsert;
+}
+
+update& update::array_filters(bsoncxx::v_noabi::array::view_or_value array_filters) {
+    _array_filters = std::move(array_filters);
+    return *this;
+}
+
+const stdx::optional<bsoncxx::v_noabi::array::view_or_value>& update::array_filters() const {
+    return _array_filters;
+}
+
+insert& insert::bypass_document_validation(bool bypass_document_validation) {
+    _bypass_document_validation = bypass_document_validation;
+    return *this;
+}
+
+insert& insert::ordered(bool ordered) {
+    _ordered = ordered;
+    return *this;
+}
+
+insert& insert::comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment) {
+    _comment = std::move(comment);
+    return *this;
+}
+
+const stdx::optional<bool>& insert::bypass_document_validation() const {
+    return _bypass_document_validation;
+}
+
+const stdx::optional<bool>& insert::ordered() const {
+    return _ordered;
+}
+
+const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& insert::comment() const {
+    return _comment;
+}
 
 } //namespace options
 

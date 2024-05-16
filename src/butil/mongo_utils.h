@@ -44,12 +44,40 @@ namespace mongo {
 
 namespace options {
 struct update {
-    bool upsert = false;
-    bool multi = false;
+    update& bypass_document_validation(bool bypass_document_validation);
+    const stdx::optional<bool>& bypass_document_validation() const;
+    update& collation(bsoncxx::v_noabi::document::view_or_value collation);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& collation() const;
+    update& let(bsoncxx::v_noabi::document::view_or_value let);
+    const stdx::optional<bsoncxx::v_noabi::document::view_or_value> let() const;
+    update& comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment);
+    const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> comment() const;
+    update& upsert(bool upsert);
+    const stdx::optional<bool>& upsert() const;
+    update& array_filters(bsoncxx::v_noabi::array::view_or_value array_filters);
+    const stdx::optional<bsoncxx::v_noabi::array::view_or_value>& array_filters() const;
+
+private:
+    stdx::optional<bool> _bypass_document_validation;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _collation;
+    stdx::optional<bool> _upsert;
+    stdx::optional<bsoncxx::v_noabi::array::view_or_value> _array_filters;
+    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _let;
+    stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> _comment;
 };
 
 struct insert {
-    bool ordered = false;
+    insert& bypass_document_validation(bool bypass_document_validation);
+    const stdx::optional<bool>& bypass_document_validation() const;
+    insert& ordered(bool ordered);
+    const stdx::optional<bool>& ordered() const;
+    insert& comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment);
+    const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& comment() const;
+
+private:
+    stdx::optional<bool> _ordered;
+    stdx::optional<bool> _bypass_document_validation;
+    stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> _comment;
 };
 
 class find {
