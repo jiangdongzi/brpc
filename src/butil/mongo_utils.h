@@ -253,10 +253,15 @@ public:
     }
 
 brpc::Channel* channel;
+MongoServersMode server_mode;
 private:
     static std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> channels;
     static thread_local std::unordered_map<std::string, brpc::Channel*> tls_channels;
     static brpc::Channel* GetChannel(const std::string& mongo_uri);
+
+    static std::unordered_map<std::string, MongoServersMode> server_modes;
+    static thread_local std::unordered_map<std::string, MongoServersMode> tls_server_modes;
+    static MongoServersMode GetMongoServersMode(const std::string& mongo_uri);
 };
 
 bsoncxx::document::view GetViewFromRawBody(const std::string& body);
