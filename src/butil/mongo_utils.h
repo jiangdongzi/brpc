@@ -239,6 +239,12 @@ public:
     Client* client;
 };
 
+enum class MongoServersMode {
+    kSingle,
+    kReplicaSet,
+    kSharded,
+};
+
 class Client {
 public:
     Client(const std::string& mongo_uri);
