@@ -212,7 +212,7 @@ class Collection {
 public:
     std::string name;
     Collection(const std::string& collection_name, Database* const db);
-    Cursor find(bsoncxx::document::view_or_value filter);
+    Cursor find(bsoncxx::document::view_or_value filter, const options::find& opts = options::find());
     // Database* database;
     std::unique_ptr<Database> database;
     bsoncxx::document::view_or_value filter;
@@ -220,6 +220,7 @@ public:
     void async_insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
     bsoncxx::document::value update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts = options::update());
     void async_update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts = options::update());
+    bsoncxx::builder::basic::document find_opt_doc;
 private:
     brpc::policy::MongoRequest create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
     brpc::policy::MongoRequest create_update_requet(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,

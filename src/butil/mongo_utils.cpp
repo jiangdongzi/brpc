@@ -497,8 +497,12 @@ Cursor::Cursor(Collection* c) {
     full_collection_name = collection->database->name + "." + collection->name;
 }
 
-Cursor Collection::find(bsoncxx::document::view_or_value filter) {
+Cursor Collection::find(bsoncxx::document::view_or_value filter, const options::find& opts) {
     this->filter = filter;
+    find_opt_doc = build_find_options_document(opts);
+    find_opt_doc.append(bsoncxx::builder::basic::kvp("find", name));
+    find_opt_doc.append(bsoncxx::builder::basic::kvp("filter", filter));
+    find_opt_doc.append(bsoncxx::builder::basic::kvp("$db", database->name));
     return Cursor(this);
 }
 
@@ -507,12 +511,7 @@ void Cursor::get_first_batch() {
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
-    bsoncxx::builder::basic::document doc;
-    doc.append(bsoncxx::builder::basic::kvp("find", collection->name));
-    doc.append(bsoncxx::builder::basic::kvp("filter", collection->filter));
-    doc.append(bsoncxx::builder::basic::kvp("$db", collection->database->name));
-
-    AddDoc2Request(doc, &request);
+    AddDoc2Request(collection->find_opt_doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     cntl.set_request_code(request_code);
     chan->CallMethod(NULL, &cntl, &request, &response, NULL);
@@ -641,11 +640,10 @@ static void LOGMongoResponse(brpc::Controller* cntl, brpc::policy::MongoResponse
 
 brpc::policy::MongoRequest Collection::create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts) {
     using namespace bsoncxx::builder::basic;
-    document insert_doc;
+    document insert_doc = build_insert_options_document(opts);
     insert_doc.append(kvp("insert", name));
     insert_doc.append(kvp("documents", make_array(doc)));
     insert_doc.append(kvp("$db", database->name));
-    insert_doc.append(kvp("ordered", opts.ordered));
     brpc::policy::MongoRequest request;
     AddDoc2Request(insert_doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
@@ -668,9 +666,10 @@ brpc::policy::MongoRequest Collection::create_update_requet(bsoncxx::document::v
     using namespace bsoncxx::builder::basic;
     document update_doc;
     update_doc.append(kvp("update", name));
-    update_doc.append(kvp("updates", make_array(
-        make_document(kvp("q", filter), kvp("u", update), kvp("multi", opts.multi), kvp("upsert", opts.upsert))
-    )));
+    auto update_one_ele = build_update_options_document(opts);
+    update_one_ele.append(kvp("q", filter));
+    update_one_ele.append(kvp("u", update));
+    update_doc.append(kvp("updates", make_array(update_one_ele)));
     update_doc.append(kvp("$db", database->name));
     brpc::policy::MongoRequest request;
     AddDoc2Request(update_doc, &request);
