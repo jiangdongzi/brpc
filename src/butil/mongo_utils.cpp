@@ -484,7 +484,6 @@ Cursor::Cursor(Collection* c) {
     collection = c;
     request_code = butil::fast_rand_less_than(UINT_MAX);
     chan = collection->database->client->channel;
-    full_collection_name = collection->database->name + "." + collection->name;
 }
 
 Cursor Collection::find(bsoncxx::document::view_or_value filter, const options::find& opts) {
