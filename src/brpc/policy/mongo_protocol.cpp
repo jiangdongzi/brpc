@@ -332,8 +332,6 @@ void SerializeMongoRequest(butil::IOBuf* buf,
                           const google::protobuf::Message* pbreq) {
     const MongoRequest* req = static_cast<const MongoRequest*>(pbreq);
 
-    LOG(INFO) << "request: " << req->ShortDebugString();
-
     switch (req->header().op_code()) {
         case OP_MSG:
         {
