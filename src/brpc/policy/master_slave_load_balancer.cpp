@@ -173,10 +173,10 @@ void MasterSlaveLoadBalancer::Destroy() {
 void MasterSlaveLoadBalancer::Describe(
     std::ostream &os, const DescribeOptions& options) {
     if (!options.verbose) {
-        os << "random";
+        os << "mongo";
         return;
     }
-    os << "Randomized{";
+    os << "mongo{";
     butil::DoublyBufferedData<Servers>::ScopedPtr s;
     if (_db_servers.Read(&s) != 0) {
         os << "fail to read _db_servers";
