@@ -338,6 +338,118 @@ const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& insert
 
 } //namespace options
 
+static bsoncxx::v_noabi::builder::basic::document build_find_options_document(
+    const options::find& options) {
+    bsoncxx::v_noabi::builder::basic::document options_builder;
+
+    using bsoncxx::v_noabi::builder::basic::kvp;
+    if (const auto& adu = options.allow_disk_use()) {
+        options_builder.append(kvp("allowDiskUse", *adu));
+    }
+
+    if (const auto& apr = options.allow_partial_results()) {
+        options_builder.append(kvp("allowPartialResults", *apr));
+    }
+
+    if (const auto& batch_size = options.batch_size()) {
+        options_builder.append(kvp("batchSize", *batch_size));
+    }
+
+    if (const auto& collation = options.collation()) {
+        options_builder.append(kvp("collation", *collation));
+    }
+
+    if (const auto& let = options.let()) {
+        options_builder.append(kvp("let", *let));
+    }
+
+    if (const auto& limit = options.limit()) {
+        options_builder.append(kvp("limit", *limit));
+    }
+
+    if (const auto& max = options.max()) {
+        options_builder.append(kvp("max", *max));
+    }
+
+    if (const auto& max_time = options.max_time()) {
+        options_builder.append(
+            kvp("maxTimeMS", bsoncxx::v_noabi::types::b_int64{max_time->count()}));
+    }
+
+    if (const auto& min = options.min()) {
+        options_builder.append(kvp("min", *min));
+    }
+
+    if (const auto& nct = options.no_cursor_timeout()) {
+        options_builder.append(kvp("noCursorTimeout", *nct));
+    }
+
+    if (const auto& projection = options.projection()) {
+        options_builder.append(kvp("projection", bsoncxx::v_noabi::types::b_document{*projection}));
+    }
+
+    if (const auto& return_key = options.return_key()) {
+        options_builder.append(kvp("returnKey", *return_key));
+    }
+
+    if (const auto& show_record_id = options.show_record_id()) {
+        options_builder.append(kvp("showRecordId", *show_record_id));
+    }
+
+    if (const auto& skip = options.skip()) {
+        options_builder.append(kvp("skip", *skip));
+    }
+
+    if (const auto& sort = options.sort()) {
+        options_builder.append(kvp("sort", bsoncxx::v_noabi::types::b_document{*sort}));
+    }
+
+    return options_builder;
+}
+
+static bsoncxx::v_noabi::builder::basic::document build_update_options_document(
+    const options::update& options) {
+    bsoncxx::v_noabi::builder::basic::document options_builder;
+
+    using bsoncxx::v_noabi::builder::basic::kvp;
+    if (const auto& bdv = options.bypass_document_validation()) {
+        options_builder.append(kvp("bypassDocumentValidation", *bdv));
+    }
+    if (const auto& collation = options.collation()) {
+        options_builder.append(kvp("collation", *collation));
+    }
+    if (const auto& let = options.let()) {
+        options_builder.append(kvp("let", *let));
+    }
+    if (const auto& comment = options.comment()) {
+        options_builder.append(kvp("comment", *comment));
+    }
+    if (const auto& upsert = options.upsert()) {
+        options_builder.append(kvp("upsert", *upsert));
+    }
+    if (const auto& array_filters = options.array_filters()) {
+        options_builder.append(kvp("arrayFilters", *array_filters));
+    }
+    return options_builder;
+}
+
+static bsoncxx::v_noabi::builder::basic::document build_insert_options_document(
+    const options::insert& options) {
+    bsoncxx::v_noabi::builder::basic::document options_builder;
+
+    using bsoncxx::v_noabi::builder::basic::kvp;
+    if (const auto& bdv = options.bypass_document_validation()) {
+        options_builder.append(kvp("bypassDocumentValidation", *bdv));
+    }
+    if (const auto& ordered = options.ordered()) {
+        options_builder.append(kvp("ordered", *ordered));
+    }
+    if (const auto& comment = options.comment()) {
+        options_builder.append(kvp("comment", *comment));
+    }
+    return options_builder;
+}
+
 
 bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
     DCHECK(*body.c_str() == 0);
