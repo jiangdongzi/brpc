@@ -338,116 +338,106 @@ const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& insert
 
 } //namespace options
 
-static bsoncxx::v_noabi::builder::basic::document build_find_options_document(
-    const options::find& options) {
-    bsoncxx::v_noabi::builder::basic::document options_builder;
+static void build_find_options_document(const options::find& options, bsoncxx::v_noabi::builder::basic::document* doc) {
 
     using bsoncxx::v_noabi::builder::basic::kvp;
     if (const auto& adu = options.allow_disk_use()) {
-        options_builder.append(kvp("allowDiskUse", *adu));
+        doc->append(kvp("allowDiskUse", *adu));
     }
 
     if (const auto& apr = options.allow_partial_results()) {
-        options_builder.append(kvp("allowPartialResults", *apr));
+        doc->append(kvp("allowPartialResults", *apr));
     }
 
     if (const auto& batch_size = options.batch_size()) {
-        options_builder.append(kvp("batchSize", *batch_size));
+        doc->append(kvp("batchSize", *batch_size));
     }
 
     if (const auto& collation = options.collation()) {
-        options_builder.append(kvp("collation", *collation));
+        doc->append(kvp("collation", *collation));
     }
 
     if (const auto& let = options.let()) {
-        options_builder.append(kvp("let", *let));
+        doc->append(kvp("let", *let));
     }
 
     if (const auto& limit = options.limit()) {
-        options_builder.append(kvp("limit", *limit));
+        doc->append(kvp("limit", *limit));
     }
 
     if (const auto& max = options.max()) {
-        options_builder.append(kvp("max", *max));
+        doc->append(kvp("max", *max));
     }
 
     if (const auto& max_time = options.max_time()) {
-        options_builder.append(
+        doc->append(
             kvp("maxTimeMS", bsoncxx::v_noabi::types::b_int64{max_time->count()}));
     }
 
     if (const auto& min = options.min()) {
-        options_builder.append(kvp("min", *min));
+        doc->append(kvp("min", *min));
     }
 
     if (const auto& nct = options.no_cursor_timeout()) {
-        options_builder.append(kvp("noCursorTimeout", *nct));
+        doc->append(kvp("noCursorTimeout", *nct));
     }
 
     if (const auto& projection = options.projection()) {
-        options_builder.append(kvp("projection", bsoncxx::v_noabi::types::b_document{*projection}));
+        doc->append(kvp("projection", bsoncxx::v_noabi::types::b_document{*projection}));
     }
 
     if (const auto& return_key = options.return_key()) {
-        options_builder.append(kvp("returnKey", *return_key));
+        doc->append(kvp("returnKey", *return_key));
     }
 
     if (const auto& show_record_id = options.show_record_id()) {
-        options_builder.append(kvp("showRecordId", *show_record_id));
+        doc->append(kvp("showRecordId", *show_record_id));
     }
 
     if (const auto& skip = options.skip()) {
-        options_builder.append(kvp("skip", *skip));
+        doc->append(kvp("skip", *skip));
     }
 
     if (const auto& sort = options.sort()) {
-        options_builder.append(kvp("sort", bsoncxx::v_noabi::types::b_document{*sort}));
+        doc->append(kvp("sort", bsoncxx::v_noabi::types::b_document{*sort}));
     }
-
-    return options_builder;
 }
 
-static bsoncxx::v_noabi::builder::basic::document build_update_options_document(
-    const options::update& options) {
-    bsoncxx::v_noabi::builder::basic::document options_builder;
+static void build_update_options_document(
+    const options::update& options, bsoncxx::builder::basic::document* doc) {
 
     using bsoncxx::v_noabi::builder::basic::kvp;
     if (const auto& bdv = options.bypass_document_validation()) {
-        options_builder.append(kvp("bypassDocumentValidation", *bdv));
+        doc->append(kvp("bypassDocumentValidation", *bdv));
     }
     if (const auto& collation = options.collation()) {
-        options_builder.append(kvp("collation", *collation));
+        doc->append(kvp("collation", *collation));
     }
     if (const auto& let = options.let()) {
-        options_builder.append(kvp("let", *let));
+        doc->append(kvp("let", *let));
     }
     if (const auto& comment = options.comment()) {
-        options_builder.append(kvp("comment", *comment));
+        doc->append(kvp("comment", *comment));
     }
     if (const auto& upsert = options.upsert()) {
-        options_builder.append(kvp("upsert", *upsert));
+        doc->append(kvp("upsert", *upsert));
     }
     if (const auto& array_filters = options.array_filters()) {
-        options_builder.append(kvp("arrayFilters", *array_filters));
+        doc->append(kvp("arrayFilters", *array_filters));
     }
-    return options_builder;
 }
 
-static bsoncxx::v_noabi::builder::basic::document build_insert_options_document(
-    const options::insert& options) {
-    bsoncxx::v_noabi::builder::basic::document options_builder;
-
+static void build_insert_options_document(const options::insert& options, bsoncxx::builder::basic::document* doc) {
     using bsoncxx::v_noabi::builder::basic::kvp;
     if (const auto& bdv = options.bypass_document_validation()) {
-        options_builder.append(kvp("bypassDocumentValidation", *bdv));
+        doc->append(kvp("bypassDocumentValidation", *bdv));
     }
     if (const auto& ordered = options.ordered()) {
-        options_builder.append(kvp("ordered", *ordered));
+        doc->append(kvp("ordered", *ordered));
     }
     if (const auto& comment = options.comment()) {
-        options_builder.append(kvp("comment", *comment));
+        doc->append(kvp("comment", *comment));
     }
-    return options_builder;
 }
 
 
@@ -499,10 +489,10 @@ Cursor::Cursor(Collection* c) {
 
 Cursor Collection::find(bsoncxx::document::view_or_value filter, const options::find& opts) {
     this->filter = filter;
-    find_opt_doc = build_find_options_document(opts);
     find_opt_doc.append(bsoncxx::builder::basic::kvp("find", name));
     find_opt_doc.append(bsoncxx::builder::basic::kvp("filter", filter));
     find_opt_doc.append(bsoncxx::builder::basic::kvp("$db", database->name));
+    build_find_options_document(opts, &find_opt_doc);
     return Cursor(this);
 }
 
@@ -640,10 +630,11 @@ static void LOGMongoResponse(brpc::Controller* cntl, brpc::policy::MongoResponse
 
 brpc::policy::MongoRequest Collection::create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts) {
     using namespace bsoncxx::builder::basic;
-    document insert_doc = build_insert_options_document(opts);
+    document insert_doc;
     insert_doc.append(kvp("insert", name));
     insert_doc.append(kvp("documents", make_array(doc)));
     insert_doc.append(kvp("$db", database->name));
+    build_insert_options_document(opts, &insert_doc);
     brpc::policy::MongoRequest request;
     AddDoc2Request(insert_doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
@@ -666,9 +657,10 @@ brpc::policy::MongoRequest Collection::create_update_requet(bsoncxx::document::v
     using namespace bsoncxx::builder::basic;
     document update_doc;
     update_doc.append(kvp("update", name));
-    auto update_one_ele = build_update_options_document(opts);
+    bsoncxx::builder::basic::document update_one_ele;
     update_one_ele.append(kvp("q", filter));
     update_one_ele.append(kvp("u", update));
+    build_update_options_document(opts, &update_one_ele);
     update_doc.append(kvp("updates", make_array(update_one_ele)));
     update_doc.append(kvp("$db", database->name));
     brpc::policy::MongoRequest request;

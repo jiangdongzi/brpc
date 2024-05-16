@@ -67,11 +67,13 @@ int main(int argc, char* argv[]) {
 
     butil::mongo::Client client(FLAGS_server);
     auto col = client["myDatabase"]["test"];
-    // bsoncxx::builder::basic::document doc;
-    // auto views = col.find(doc.view());
-    // for (auto&& view : views) {
-    //     std::cout << "ivyjxj::" << bsoncxx::to_json(view) << std::endl;
-    // }
+    bsoncxx::builder::basic::document doc;
+    butil::mongo::options::find opt{};
+    opt.batch_size(2);
+    auto views = col.find(doc.view(), opt);
+    for (auto&& view : views) {
+        std::cout << "ivyjxj::" << bsoncxx::to_json(view) << std::endl;
+    }
     using namespace bsoncxx::builder::basic;
     bsoncxx::builder::basic::document query{};
     query.append(bsoncxx::builder::basic::kvp("name", "ivyjxjhello"));
@@ -82,10 +84,8 @@ int main(int argc, char* argv[]) {
                 bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp("age", 567)
                 )));
-    butil::mongo::options::update opt{};
-    opt.upsert = true;
-    opt.multi = true;
-    col.async_update_one(query.view(), update.view(), opt);
+    butil::mongo::options::update opt_update{};
+    col.async_update_one(query.view(), update.view(), opt_update);
     bthread_usleep(1000 * 1000 * 10);
     return 0;
 }
