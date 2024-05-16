@@ -476,8 +476,64 @@ brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
     return tls_channels[mongo_uri];
 }
 
+MongoServersMode Client::GetMongoServersMode(const std::string& mongo_uri_str) {
+    auto it = tls_server_modes.find(mongo_uri_str);
+    if (it != tls_server_modes.end()) {
+        return it->second;
+    }
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock_guard(mtx);
+    if (server_modes.find(mongo_uri_str) != server_modes.end()) {
+        tls_server_modes[mongo_uri_str] = server_modes[mongo_uri_str];
+        return server_modes[mongo_uri_str];
+    }
+    auto* channel = GetChannel(mongo_uri_str);
+    brpc::policy::MongoRequest request;
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    cntl.set_request_code(GetRandomRequestCode(0));
+
+    bsoncxx::builder::basic::document document{};
+    document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
+    const butil::MongoDBUri mongo_uri = butil::parse_mongo_uri(mongo_uri_str);
+
+    document.append(bsoncxx::builder::basic::kvp("$db", mongo_uri.database));
+
+    butil::mongo::AddDoc2Request(document, &request);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
+    channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongodb, " << cntl.ErrorText();
+        throw std::runtime_error("Fail to access mongodb");
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
+    LOG(INFO) << "view: " << bsoncxx::to_json(view);
+    auto vit = view.find("setName");
+    if (vit != view.end()) {
+        if (vit->get_utf8().value.to_string() == "rs") {
+            tls_server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
+            server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
+            return MongoServersMode::kReplicaSet;
+        } else {
+            throw std::runtime_error("Unsupported server mode");
+        }
+    }
+    vit = view.find("msg");
+    if (vit != view.end()) {
+        if (vit->get_utf8().value.to_string() == "isdbgrid") {
+            tls_server_modes[mongo_uri_str] = MongoServersMode::kSharded;
+            server_modes[mongo_uri_str] = MongoServersMode::kSharded;
+            return MongoServersMode::kSharded;
+        } else {
+            throw std::runtime_error("Unsupported server mode");
+        }
+    }
+    return MongoServersMode::kSingle;
+}
+
 Client::Client(const std::string& mongo_uri) {
     channel = GetChannel(mongo_uri);
+    server_mode = GetMongoServersMode(mongo_uri);
 }
 
 Cursor::Cursor(Collection* c) {
