@@ -140,7 +140,7 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
     std::vector<std::string> hosts = ResolveHostsToIPPort(mongo_uri.hosts);
     std::unordered_set<std::string> visited_hosts;
     while (!hosts.empty()) {
-        const std::string& host = hosts.back();
+        const std::string host = hosts.back();
         hosts.pop_back();
         if (visited_hosts.find(host) != visited_hosts.end()) {
             continue;
