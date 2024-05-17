@@ -543,9 +543,6 @@ static uint64_t GetPrimaryPreferredRequestCode () {
 Cursor::Cursor(Collection* c) {
     collection = c;
     request_code = butil::fast_rand_less_than(UINT_MAX);
-    if (collection->database->client->server_mode == MongoServersMode::kSharded) {
-        request_code = GetPrimaryPreferredRequestCode();
-    }
     chan = collection->database->client->channel;
 }
 
