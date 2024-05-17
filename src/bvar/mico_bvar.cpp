@@ -5,6 +5,12 @@
 
 std::string brpc_get_host_name();
 std::string brpc_get_app_name();
+bthread_t bvar_stat_tid;
+struct JoinBvarStat_tid {
+  ~JoinBvarStat_tid() {
+    bthread_join(bvar_stat_tid, nullptr);
+  }
+};
 
 static const std::string app_name = brpc_get_app_name();
 static const std::string host_name = brpc_get_host_name();
@@ -34,6 +40,7 @@ public:
 
 static brpc::Channel& GetPrometheusChannel (const std::string& pushgateway_server) {
   static brpc::Channel channel;
+  static JoinBvarStat_tid _;
   brpc::ChannelOptions options;
   options.protocol = "h2:grpc";
   options.max_retry = 3;
@@ -207,7 +214,6 @@ static void start_stat_bvar_internal(const std::string& pushgateway_server) {
     google::SetCommandLineOption("bvar_dump_interval", "16");
     std::unique_ptr<std::string> pushgateway_server_ptr(new std::string(pushgateway_server));
 
-    bthread_t bvar_stat_tid;
     bthread_start_background(&bvar_stat_tid, nullptr, dump_bvar, pushgateway_server_ptr.release());
 }
 
