@@ -157,7 +157,7 @@ int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
         return SelectServerFromList(s->master_server_list, in, out);
     }
 
-    if (read_slave_preferred) {
+    if (read_slave_preferred || in.request_code % 2 == 0) {
          if (SelectServerFromList(s->slave_server_list, in, out) == 0) {
             return 0;
          }
