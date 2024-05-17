@@ -650,6 +650,9 @@ Cursor::Iterator& Cursor::Iterator::operator++() {
 std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> Client::channels;
 thread_local std::unordered_map<std::string, brpc::Channel*> Client::tls_channels;
 
+std::unordered_map<std::string, MongoServersMode> Client::server_modes;
+thread_local std::unordered_map<std::string, MongoServersMode> Client::tls_server_modes;
+
 static std::string BuildSections (const bsoncxx::builder::basic::document& doc) {
     std::string sections;
     sections += '\0';
