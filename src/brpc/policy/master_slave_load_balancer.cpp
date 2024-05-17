@@ -21,6 +21,7 @@
 #include "butil/fast_rand.h"
 #include "brpc/socket.h"
 #include "butil/mongo_utils.h"
+#include <cstdint>
 #include "brpc/policy/master_slave_load_balancer.h"
 
 namespace brpc {
@@ -150,7 +151,13 @@ int MasterSlaveLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
     if (_db_servers.Read(&s) != 0) {
         return ENOMEM;
     }
-    if (read_slave_preferred) {
+
+    uint32_t request_flag = butil::mongo::GetFlagFromRequestCode(in.request_code);
+    if (request_flag & butil::mongo::primary_preferred) {
+        return SelectServerFromList(s->master_server_list, in, out);
+    }
+
+    if (read_slave_preferred || in.request_code % 2 == 0) {
          if (SelectServerFromList(s->slave_server_list, in, out) == 0) {
             return 0;
          }
@@ -173,10 +180,10 @@ void MasterSlaveLoadBalancer::Destroy() {
 void MasterSlaveLoadBalancer::Describe(
     std::ostream &os, const DescribeOptions& options) {
     if (!options.verbose) {
-        os << "random";
+        os << "mongo";
         return;
     }
-    os << "Randomized{";
+    os << "mongo{";
     butil::DoublyBufferedData<Servers>::ScopedPtr s;
     if (_db_servers.Read(&s) != 0) {
         os << "fail to read _db_servers";

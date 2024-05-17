@@ -153,6 +153,17 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
         // 创建 BSON 视图
         bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(is_master_msg);
         LOG(INFO) << bsoncxx::to_json(view);
+        //校验replicaSet
+        if (view.find("setName") != view.end()) {
+            auto it = mongo_uri.options.find("replicaSet");
+            if (it != mongo_uri.options.end()) {
+                if (it->second != view["setName"].get_utf8().value.to_string()) {
+                    LOG(ERROR) << "replicaSet not match";
+                    continue;
+                }
+            }
+        }
+
         auto v = view["ismaster"];
         butil::EndPoint point;
         str2endpoint(host.c_str(), &point);
