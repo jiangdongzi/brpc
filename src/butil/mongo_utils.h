@@ -7,7 +7,6 @@
 #include <vector>
 #include <bsoncxx/types.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
-#include <bsoncxx/types/bson_value/view_or_value.hpp>
 
 #pragma once
 namespace butil {
@@ -50,8 +49,6 @@ struct update {
     const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& collation() const;
     update& let(bsoncxx::v_noabi::document::view_or_value let);
     const stdx::optional<bsoncxx::v_noabi::document::view_or_value> let() const;
-    update& comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment);
-    const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> comment() const;
     update& upsert(bool upsert);
     const stdx::optional<bool>& upsert() const;
     update& array_filters(bsoncxx::v_noabi::array::view_or_value array_filters);
@@ -63,7 +60,6 @@ private:
     stdx::optional<bool> _upsert;
     stdx::optional<bsoncxx::v_noabi::array::view_or_value> _array_filters;
     stdx::optional<bsoncxx::v_noabi::document::view_or_value> _let;
-    stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> _comment;
 };
 
 struct insert {
@@ -71,13 +67,10 @@ struct insert {
     const stdx::optional<bool>& bypass_document_validation() const;
     insert& ordered(bool ordered);
     const stdx::optional<bool>& ordered() const;
-    insert& comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment);
-    const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& comment() const;
 
 private:
     stdx::optional<bool> _ordered;
     stdx::optional<bool> _bypass_document_validation;
-    stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> _comment;
 };
 
 class find {
@@ -92,9 +85,6 @@ class find {
     const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& collation() const;
     find& let(bsoncxx::v_noabi::document::view_or_value let);
     const stdx::optional<bsoncxx::v_noabi::document::view_or_value> let() const;
-    find& comment_option(bsoncxx::v_noabi::types::bson_value::view_or_value comment);
-    const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& comment_option()
-        const;
     find& limit(std::int64_t limit);
     const stdx::optional<std::int64_t>& limit() const;
     find& max(bsoncxx::v_noabi::document::view_or_value max);
@@ -126,7 +116,6 @@ class find {
     stdx::optional<std::int32_t> _batch_size;
     stdx::optional<bsoncxx::v_noabi::document::view_or_value> _collation;
     stdx::optional<bsoncxx::v_noabi::document::view_or_value> _let;
-    stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> _comment_option;
     stdx::optional<std::int64_t> _limit;
     stdx::optional<bsoncxx::v_noabi::document::view_or_value> _max;
     stdx::optional<std::chrono::milliseconds> _max_await_time;
