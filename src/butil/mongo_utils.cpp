@@ -1,5 +1,6 @@
 #include "mongo_utils.h"
 #include "brpc/policy/mongo.pb.h"
+#include "bsoncxx/builder/basic/document.hpp"
 #include "butil/fast_rand.h"
 #include "brpc/channel.h"
 #include "butil/logging.h"
@@ -534,6 +535,8 @@ MongoServersMode Client::GetMongoServersMode(const std::string& mongo_uri_str) {
 Client::Client(const std::string& mongo_uri) {
     channel = GetChannel(mongo_uri);
     server_mode = GetMongoServersMode(mongo_uri);
+    MongoDBUri parsed = parse_mongo_uri(mongo_uri);
+    read_slave_preferred = server_mode == MongoServersMode::kSharded && parsed.read_slave_preferred();
 }
 
 static uint64_t GetPrimaryPreferredRequestCode () {
@@ -551,6 +554,9 @@ Cursor Collection::find(bsoncxx::document::view_or_value filter, const options::
     find_opt_doc.append(bsoncxx::builder::basic::kvp("find", name));
     find_opt_doc.append(bsoncxx::builder::basic::kvp("filter", filter));
     find_opt_doc.append(bsoncxx::builder::basic::kvp("$db", database->name));
+    if (database->client->read_slave_preferred) {
+        find_opt_doc.append(bsoncxx::builder::basic::kvp("readPreference", bsoncxx::builder::basic::make_document("mode", "secondaryPreferred")));
+    }
     build_find_options_document(opts, &find_opt_doc);
     return Cursor(this);
 }

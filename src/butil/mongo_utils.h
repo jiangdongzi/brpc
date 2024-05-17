@@ -288,6 +288,7 @@ public:
 
 brpc::Channel* channel;
 MongoServersMode server_mode;
+bool read_slave_preferred;
 private:
     static std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> channels;
     static thread_local std::unordered_map<std::string, brpc::Channel*> tls_channels;
