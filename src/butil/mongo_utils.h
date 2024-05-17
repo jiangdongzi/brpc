@@ -147,6 +147,40 @@ class Client;
 class Database;
 class Collection;
 
+enum class read_mode : std::uint8_t {
+    ///
+    /// Only read from a primary node.
+    ///
+    k_primary,
+
+    ///
+    /// Prefer to read from a primary node.
+    ///
+    k_primary_preferred,
+
+    ///
+    /// Only read from secondary nodes.
+    ///
+    k_secondary,
+
+    ///
+    /// Prefer to read from secondary nodes.
+    ///
+    k_secondary_preferred,
+
+    ///
+    /// Read from the node with the lowest latency irrespective of state.
+    ///
+    k_nearest
+};
+
+constexpr uint64_t primary_preferred = (1 << (int)read_mode::k_primary) | (1 << (int)read_mode::k_primary_preferred);
+constexpr uint64_t secondary_preferred = (1 << (int)read_mode::k_secondary) | (1 << (int)read_mode::k_secondary_preferred);
+
+inline uint32_t GetFlagFromRequestCode(uint64_t request_code) {
+    return request_code >> 32;
+}
+
 class Cursor {
 public:
     Cursor(Collection* c);

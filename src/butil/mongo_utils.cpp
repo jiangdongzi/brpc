@@ -536,9 +536,16 @@ Client::Client(const std::string& mongo_uri) {
     server_mode = GetMongoServersMode(mongo_uri);
 }
 
+static uint64_t GetPrimaryPreferredRequestCode () {
+    return GetRandomRequestCode(primary_preferred);
+}
+
 Cursor::Cursor(Collection* c) {
     collection = c;
     request_code = butil::fast_rand_less_than(UINT_MAX);
+    if (collection->database->client->server_mode == MongoServersMode::kSharded) {
+        request_code = GetPrimaryPreferredRequestCode();
+    }
     chan = collection->database->client->channel;
 }
 
@@ -656,13 +663,14 @@ std::string RemoveMongoDBPrefix(const std::string& url) {
     // If no prefix, return the original URL
     return url;
 }
+
 bsoncxx::document::value Collection::insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts) {
     using namespace bsoncxx::builder::basic;
 
     brpc::policy::MongoRequest request = create_insert_requet(doc, opts);
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    cntl.set_request_code(GetRandomRequestCode(0));
+    cntl.set_request_code(GetPrimaryPreferredRequestCode());
     database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
@@ -701,7 +709,7 @@ void Collection::async_insert_one(bsoncxx::document::view_or_value doc, const op
     brpc::policy::MongoRequest request = create_insert_requet(doc, opts);
     brpc::policy::MongoResponse* response = new brpc::policy::MongoResponse();
     brpc::Controller* cntl = new brpc::Controller;
-    cntl->set_request_code(GetRandomRequestCode(0));
+    cntl->set_request_code(GetPrimaryPreferredRequestCode());
     google::protobuf::Closure* done = brpc::NewCallback(
             &LOGMongoResponse, cntl, response);
     database->client->channel->CallMethod(NULL, cntl, &request, response, done);
@@ -729,7 +737,7 @@ bsoncxx::document::value Collection::update_one(bsoncxx::document::view_or_value
     brpc::policy::MongoRequest request = create_update_requet(filter, update, opts);
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
-    cntl.set_request_code(GetRandomRequestCode(0));
+    cntl.set_request_code(GetPrimaryPreferredRequestCode());
     database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
     if (cntl.Failed()) {
         LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
@@ -744,7 +752,7 @@ void Collection::async_update_one(bsoncxx::document::view_or_value filter, bsonc
     brpc::policy::MongoRequest request = create_update_requet(filter, update, opts);
     brpc::policy::MongoResponse* response = new brpc::policy::MongoResponse();
     brpc::Controller* cntl = new brpc::Controller;
-    cntl->set_request_code(GetRandomRequestCode(0));
+    cntl->set_request_code(GetPrimaryPreferredRequestCode());
     google::protobuf::Closure* done = brpc::NewCallback(
             &LOGMongoResponse, cntl, response);
     database->client->channel->CallMethod(NULL, cntl, &request, response, done);
