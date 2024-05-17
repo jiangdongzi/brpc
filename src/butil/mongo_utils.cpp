@@ -107,7 +107,7 @@ find& find::batch_size(std::int32_t batch_size) {
     return *this;
 }
 
-find& find::collation(bsoncxx::v_noabi::document::view_or_value collation) {
+find& find::collation(bsoncxx::document::view_or_value collation) {
     _collation = std::move(collation);
     return *this;
 }
@@ -117,13 +117,13 @@ find& find::limit(std::int64_t limit) {
     return *this;
 }
 
-find& find::let(bsoncxx::v_noabi::document::view_or_value let) {
+find& find::let(bsoncxx::document::view_or_value let) {
     _let = let;
     return *this;
 }
 
 
-find& find::max(bsoncxx::v_noabi::document::view_or_value max) {
+find& find::max(bsoncxx::document::view_or_value max) {
     _max = std::move(max);
     return *this;
 }
@@ -138,7 +138,7 @@ find& find::max_time(std::chrono::milliseconds max_time) {
     return *this;
 }
 
-find& find::min(bsoncxx::v_noabi::document::view_or_value min) {
+find& find::min(bsoncxx::document::view_or_value min) {
     _min = std::move(min);
     return *this;
 }
@@ -148,12 +148,12 @@ find& find::no_cursor_timeout(bool no_cursor_timeout) {
     return *this;
 }
 
-find& find::projection(bsoncxx::v_noabi::document::view_or_value projection) {
+find& find::projection(bsoncxx::document::view_or_value projection) {
     _projection = std::move(projection);
     return *this;
 }
 
-find& find::read_preference(bsoncxx::v_noabi::document::view_or_value rp) {
+find& find::read_preference(bsoncxx::document::view_or_value rp) {
     _read_preference = std::move(rp);
     return *this;
 }
@@ -173,7 +173,7 @@ find& find::skip(std::int64_t skip) {
     return *this;
 }
 
-find& find::sort(bsoncxx::v_noabi::document::view_or_value ordering) {
+find& find::sort(bsoncxx::document::view_or_value ordering) {
     _ordering = std::move(ordering);
     return *this;
 }
@@ -190,7 +190,7 @@ const stdx::optional<std::int32_t>& find::batch_size() const {
     return _batch_size;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::collation() const {
+const stdx::optional<bsoncxx::document::view_or_value>& find::collation() const {
     return _collation;
 }
 
@@ -198,11 +198,11 @@ const stdx::optional<std::int64_t>& find::limit() const {
     return _limit;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value> find::let() const {
+const stdx::optional<bsoncxx::document::view_or_value> find::let() const {
     return _let;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::max() const {
+const stdx::optional<bsoncxx::document::view_or_value>& find::max() const {
     return _max;
 }
 
@@ -214,7 +214,7 @@ const stdx::optional<std::chrono::milliseconds>& find::max_time() const {
     return _max_time;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::min() const {
+const stdx::optional<bsoncxx::document::view_or_value>& find::min() const {
     return _min;
 }
 
@@ -222,7 +222,7 @@ const stdx::optional<bool>& find::no_cursor_timeout() const {
     return _no_cursor_timeout;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::projection() const {
+const stdx::optional<bsoncxx::document::view_or_value>& find::projection() const {
     return _projection;
 }
 
@@ -238,11 +238,11 @@ const stdx::optional<std::int64_t>& find::skip() const {
     return _skip;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::sort() const {
+const stdx::optional<bsoncxx::document::view_or_value>& find::sort() const {
     return _ordering;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::read_preference() const {
+const stdx::optional<bsoncxx::document::view_or_value>& find::read_preference() const {
     return _read_preference;
 }
 
@@ -252,12 +252,12 @@ update& update::bypass_document_validation(bool bypass_document_validation) {
     return *this;
 }
 
-update& update::collation(bsoncxx::v_noabi::document::view_or_value collation) {
+update& update::collation(bsoncxx::document::view_or_value collation) {
     _collation = std::move(collation);
     return *this;
 }
 
-update& update::let(bsoncxx::v_noabi::document::view_or_value let) {
+update& update::let(bsoncxx::document::view_or_value let) {
     _let = let;
     return *this;
 }
@@ -271,11 +271,11 @@ const stdx::optional<bool>& update::bypass_document_validation() const {
     return _bypass_document_validation;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& update::collation() const {
+const stdx::optional<bsoncxx::document::view_or_value>& update::collation() const {
     return _collation;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value> update::let() const {
+const stdx::optional<bsoncxx::document::view_or_value> update::let() const {
     return _let;
 }
 
@@ -283,12 +283,12 @@ const stdx::optional<bool>& update::upsert() const {
     return _upsert;
 }
 
-update& update::array_filters(bsoncxx::v_noabi::array::view_or_value array_filters) {
+update& update::array_filters(bsoncxx::array::view_or_value array_filters) {
     _array_filters = std::move(array_filters);
     return *this;
 }
 
-const stdx::optional<bsoncxx::v_noabi::array::view_or_value>& update::array_filters() const {
+const stdx::optional<bsoncxx::array::view_or_value>& update::array_filters() const {
     return _array_filters;
 }
 
@@ -312,9 +312,9 @@ const stdx::optional<bool>& insert::ordered() const {
 
 } //namespace options
 
-static void build_find_options_document(const options::find& options, bsoncxx::v_noabi::builder::basic::document* doc) {
+static void build_find_options_document(const options::find& options, bsoncxx::builder::basic::document* doc) {
 
-    using bsoncxx::v_noabi::builder::basic::kvp;
+    using bsoncxx::builder::basic::kvp;
     if (const auto& adu = options.allow_disk_use()) {
         doc->append(kvp("allowDiskUse", *adu));
     }
@@ -345,7 +345,7 @@ static void build_find_options_document(const options::find& options, bsoncxx::v
 
     if (const auto& max_time = options.max_time()) {
         doc->append(
-            kvp("maxTimeMS", bsoncxx::v_noabi::types::b_int64{max_time->count()}));
+            kvp("maxTimeMS", bsoncxx::types::b_int64{max_time->count()}));
     }
 
     if (const auto& min = options.min()) {
@@ -357,7 +357,7 @@ static void build_find_options_document(const options::find& options, bsoncxx::v
     }
 
     if (const auto& projection = options.projection()) {
-        doc->append(kvp("projection", bsoncxx::v_noabi::types::b_document{*projection}));
+        doc->append(kvp("projection", bsoncxx::types::b_document{*projection}));
     }
 
     if (const auto& return_key = options.return_key()) {
@@ -373,14 +373,14 @@ static void build_find_options_document(const options::find& options, bsoncxx::v
     }
 
     if (const auto& sort = options.sort()) {
-        doc->append(kvp("sort", bsoncxx::v_noabi::types::b_document{*sort}));
+        doc->append(kvp("sort", bsoncxx::types::b_document{*sort}));
     }
 }
 
 static void build_update_options_document(
     const options::update& options, bsoncxx::builder::basic::document* doc) {
 
-    using bsoncxx::v_noabi::builder::basic::kvp;
+    using bsoncxx::builder::basic::kvp;
     if (const auto& bdv = options.bypass_document_validation()) {
         doc->append(kvp("bypassDocumentValidation", *bdv));
     }
@@ -399,7 +399,7 @@ static void build_update_options_document(
 }
 
 static void build_insert_options_document(const options::insert& options, bsoncxx::builder::basic::document* doc) {
-    using bsoncxx::v_noabi::builder::basic::kvp;
+    using bsoncxx::builder::basic::kvp;
     if (const auto& bdv = options.bypass_document_validation()) {
         doc->append(kvp("bypassDocumentValidation", *bdv));
     }
