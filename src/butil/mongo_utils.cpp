@@ -122,10 +122,6 @@ find& find::let(bsoncxx::v_noabi::document::view_or_value let) {
     return *this;
 }
 
-find& find::comment_option(bsoncxx::v_noabi::types::bson_value::view_or_value comment) {
-    _comment_option = std::move(comment);
-    return *this;
-}
 
 find& find::max(bsoncxx::v_noabi::document::view_or_value max) {
     _max = std::move(max);
@@ -206,11 +202,6 @@ const stdx::optional<bsoncxx::v_noabi::document::view_or_value> find::let() cons
     return _let;
 }
 
-const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& find::comment_option()
-    const {
-    return _comment_option;
-}
-
 const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find::max() const {
     return _max;
 }
@@ -271,11 +262,6 @@ update& update::let(bsoncxx::v_noabi::document::view_or_value let) {
     return *this;
 }
 
-update& update::comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment) {
-    _comment = std::move(comment);
-    return *this;
-}
-
 update& update::upsert(bool upsert) {
     _upsert = upsert;
     return *this;
@@ -291,10 +277,6 @@ const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& update::collati
 
 const stdx::optional<bsoncxx::v_noabi::document::view_or_value> update::let() const {
     return _let;
-}
-
-const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value> update::comment() const {
-    return _comment;
 }
 
 const stdx::optional<bool>& update::upsert() const {
@@ -320,21 +302,12 @@ insert& insert::ordered(bool ordered) {
     return *this;
 }
 
-insert& insert::comment(bsoncxx::v_noabi::types::bson_value::view_or_value comment) {
-    _comment = std::move(comment);
-    return *this;
-}
-
 const stdx::optional<bool>& insert::bypass_document_validation() const {
     return _bypass_document_validation;
 }
 
 const stdx::optional<bool>& insert::ordered() const {
     return _ordered;
-}
-
-const stdx::optional<bsoncxx::v_noabi::types::bson_value::view_or_value>& insert::comment() const {
-    return _comment;
 }
 
 } //namespace options
@@ -417,9 +390,6 @@ static void build_update_options_document(
     if (const auto& let = options.let()) {
         doc->append(kvp("let", *let));
     }
-    if (const auto& comment = options.comment()) {
-        doc->append(kvp("comment", *comment));
-    }
     if (const auto& upsert = options.upsert()) {
         doc->append(kvp("upsert", *upsert));
     }
@@ -435,9 +405,6 @@ static void build_insert_options_document(const options::insert& options, bsoncx
     }
     if (const auto& ordered = options.ordered()) {
         doc->append(kvp("ordered", *ordered));
-    }
-    if (const auto& comment = options.comment()) {
-        doc->append(kvp("comment", *comment));
     }
 }
 
