@@ -30,12 +30,15 @@ public:
         _uri = butil::parse_mongo_uri(uri_str);
     }
 
-    int GenerateCredential(std::string* auth_str) const;
+    int GenerateCredential(std::string* auth_str) const {
+        return 0;
+    }
 
     int VerifyCredential(const std::string&, const butil::EndPoint&,
                          brpc::AuthContext*) const {
         return 0;
     }
+    int AuthSCRAMSHA1(Controller* raw_cntl) const;
 private:
     butil::MongoDBUri _uri;
 };

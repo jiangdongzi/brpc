@@ -23,6 +23,10 @@
 #include <openssl/bio.h>
 #include <openssl/hmac.h>
 #include <openssl/buffer.h>
+#include "brpc/controller.h"
+#include "brpc/details/controller_private_accessor.h"
+#include "brpc/mongo_head.h"
+#include "bthread/id.h"
 #include "butil/base64.h"
 #include "butil/mongo_utils.h"
 #include "butil/base64.h"
@@ -106,12 +110,24 @@ int GetConversationId (const std::string& data) {
     return view["conversationId"].get_int32().value;
 }
 
-int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
+static int SetControllerSendingSock(const SocketId id, Controller *cntl) {
+    SocketUniquePtr tmp_sock;
+    const int rc = Socket::Address(id, &tmp_sock);
+    if (rc != 0) {
+        LOG(ERROR) << "Fail to get address of socket=" << id << ": " << berror(rc);
+        cntl->SetFailed(rc, "Fail to get address of socket");
+        return rc;
+    }
+    cntl->SetSendingSock(tmp_sock.release());
+    return 0;
+}
+
+int MongoAuthenticator::AuthSCRAMSHA1(Controller* raw_cntl) const{
+    const SocketId id = raw_cntl->GetSendingSock()->id();
     //first step
     const std::string& user_name = _uri.username;
     const std::string& password = _uri.password;
     const std::string& database = _uri.database;
-    const std::string& host = _uri.hosts[0];
     char r[256], s[256];
     int i;
     std::string encoded_nonce;
@@ -132,27 +148,34 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     command.append(bsoncxx::builder::basic::kvp("autoAuthorize", 1));
     command.append(bsoncxx::builder::basic::kvp("$db", database));
 
-    brpc::policy::MongoRequest request;
-    brpc::policy::MongoResponse response;
+    std::string sections = butil::mongo::BuildSections(command);
+    butil::IOBuf buf;
+
+    mongo_head_t header = {
+        (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + sections.size()),
+        1,
+        0,
+        OP_MSG
+    };
+    buf.append(&header, sizeof(header));
+    const int flags = 0;
+    buf.append(&flags, sizeof(flags));
+    buf.append(sections);
     brpc::Controller cntl;
-    brpc::Channel channel;
-    
-    // Initialize the channel, NULL means using default options. 
-    brpc::ChannelOptions options;
-    options.protocol = brpc::PROTOCOL_MONGO;
+    auto correlation_id = cntl.call_id();
+    int rc = bthread_id_lock_and_reset_range(
+                    correlation_id, NULL, 2);
+    SetControllerSendingSock(id, &cntl);
+    CallId cid = cntl.current_id();
+    cntl.GetSendingSock()->set_correlation_id(cid.value);
+    Socket::WriteOptions wopt;
+    wopt.id_wait = cid;
+    brpc::policy::MongoResponse response;
+    cntl.SetResponse(&response);
+    cntl.GetSendingSock()->Write(&buf, &wopt);
+    bthread_id_unlock(cid);
+    Join(cid);
 
-    if (channel.Init(host.c_str(), "", &options) != 0) {
-        LOG(ERROR) << "Fail to initialize channel";
-        return -1;
-    }
-
-    butil::mongo::AddDoc2Request(command, &request);
-    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
-        return -1;
-    }
     first_payload_str = GetPayload(response.sections());
     sscanf(first_payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
     LOG(INFO) << "r: " << r << ", s: " << s << ", i: " << i;
@@ -202,14 +225,38 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     builder.append(bsoncxx::builder::basic::kvp("conversationId", conv_id));
     AppendBinary(builder, "payload", out_str);
     builder.append(bsoncxx::builder::basic::kvp("$db", database));
-    butil::mongo::AddDoc2Request(builder, &request);
+    sections = butil::mongo::BuildSections(builder);
     response.Clear();
+
+    header.message_length = (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + sections.size());
+
+    buf.clear();
+    buf.append(&header, sizeof(header));
+    buf.append(&flags, sizeof(flags));
+    buf.append(sections);
+
     cntl.Reset();
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
+    correlation_id = cntl.call_id();
+    rc = bthread_id_lock_and_reset_range(
+                    correlation_id, NULL, 2);
+    SetControllerSendingSock(id, &cntl);
+    cid = cntl.current_id();
+    cntl.GetSendingSock()->set_correlation_id(cid.value);
+    wopt.id_wait = cid;
+    response.Clear();
+    cntl.SetResponse(&response);
+    cntl.GetSendingSock()->Write(&buf, &wopt);
+    CHECK_EQ(0, bthread_id_unlock(cid));
+    Join(cid);
+    if (rc != 0) {
+        LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
+            << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
         return -1;
     }
+    cntl.GetSendingSock()->Write(&buf, &wopt);
+    bthread_id_unlock(cid);
+    Join(cid);
+
     const std::string second_payload_str = GetPayload(response.sections());
     LOG(INFO) << "second_payload_str: " << second_payload_str;
 
@@ -239,15 +286,28 @@ int MongoAuthenticator::GenerateCredential(std::string* /*auth_str*/) const {
     // 注意：根据你的需要，如果payload应该是空的二进制数据，你可以如下设置：
     builder.append(kvp("payload", bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary, 0, nullptr}));
     builder.append(bsoncxx::builder::basic::kvp("$db", database));
-    butil::mongo::AddDoc2Request(builder, &request);
 
+    sections = butil::mongo::BuildSections(builder);
+    response.Clear();
+    buf.clear();
+    header.message_length = (int)(sizeof(mongo_head_t) + sizeof(uint32_t) + sections.size());
+    buf.append(&header, sizeof(header));
+    buf.append(&flags, sizeof(flags));
+    buf.append(sections);
     cntl.Reset();
-
-    channel.CallMethod(NULL, &cntl, &request, &response, NULL);
-    if (cntl.Failed()) {
-        LOG(ERROR) << "Fail to access memcache, " << cntl.ErrorText();
-        return -1;
-    }
+    cntl.SetResponse(&response);
+    correlation_id = cntl.call_id();
+    rc = bthread_id_lock_and_reset_range(
+                    correlation_id, NULL, 2);
+    SetControllerSendingSock(id, &cntl);
+    cid = cntl.current_id();
+    cntl.GetSendingSock()->set_correlation_id(cid.value);
+    wopt.id_wait = cid;
+    response.Clear();
+    // accessor.get_sending_socket()->Write(&buf, &wopt);
+    cntl.GetSendingSock()->Write(&buf, &wopt);
+    bthread_id_unlock(cid);
+    Join(cid);
 
     bool is_done = IsDone(response.sections());
     LOG(INFO) << "is_done: " << is_done;

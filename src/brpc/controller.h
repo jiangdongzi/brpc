@@ -199,6 +199,14 @@ public:
     // Get number of retries.
     int retried_count() const { return _current_call.nretry; }
 
+    Socket* GetSendingSock() const {
+        return _current_call.sending_sock.get();
+    }
+
+    void SetSendingSock(Socket* sock) {
+        _current_call.sending_sock.reset(sock);
+    }
+
     // True if a backup request was sent during the RPC.
     bool has_backup_request() const { return has_flag(FLAGS_BACKUP_REQUEST); }
 
@@ -579,6 +587,10 @@ public:
 
     // The id to cancel RPC call or join response.
     CallId call_id();
+
+    void SetResponse(google::protobuf::Message* response) {
+        _response = response;
+    }
 
     // Get/set idl names. Notice that the names must be string-constant.
     // int32_t Echo(EchoRequest req, EchoResponse res);

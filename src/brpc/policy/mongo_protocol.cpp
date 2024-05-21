@@ -302,15 +302,6 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
     mongo_done->Run();
 }
 
-// static std::atomic_bool flag;
-
-// static void TestMongoGenerator() {
-//     flag.store(true);
-//     flag.store(true);
-//     MongoAuthenticator auth("mongodb://myUser:password123@localhost:7017/myDatabase");
-//     auth.GenerateCredential(nullptr);
-// }
-
 void PackMongoRequest(butil::IOBuf* req_buf,
                     SocketMessage**,
                     uint64_t correlation_id,
@@ -319,7 +310,7 @@ void PackMongoRequest(butil::IOBuf* req_buf,
                     const butil::IOBuf& request_body,
                     const Authenticator* auth) {
 
-    if (auth && auth->GenerateCredential(nullptr) != 0) {
+    if (auth && ((MongoAuthenticator*)auth)->AuthSCRAMSHA1(cntl) != 0) {
         return cntl->SetFailed(EREQUEST, "Fail to generate credential");
     }
     ControllerPrivateAccessor accessor(cntl);
@@ -363,7 +354,6 @@ void SerializeMongoRequest(butil::IOBuf* buf,
 }
 
 void ProcessMongoResponse(InputMessageBase* msg_base) {
-    // const int64_t start_parse_us = butil::cpuwide_time_us();
     DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
 
     char buf[sizeof(mongo_head_t)];
