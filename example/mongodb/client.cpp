@@ -87,7 +87,9 @@ int main(int argc, char* argv[]) {
     // opt_update.upsert(true);
     butil::mongo::options::find_one_and_update opts;
     ret = col.find_one_and_update(query.view(), update.view(), opts);
-    LOG(INFO) << bsoncxx::to_json(*ret);
+    if (ret) {
+        LOG(INFO) << bsoncxx::to_json(*ret);
+    }
     bthread_usleep(1000 * 1000 * 10);
     return 0;
 }

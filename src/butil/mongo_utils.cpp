@@ -753,7 +753,7 @@ thread_local std::unordered_map<std::string, brpc::Channel*> Client::tls_channel
 std::unordered_map<std::string, MongoServersMode> Client::server_modes;
 thread_local std::unordered_map<std::string, MongoServersMode> Client::tls_server_modes;
 
-static std::string BuildSections (const bsoncxx::builder::basic::document& doc) {
+std::string BuildSections (const bsoncxx::builder::basic::document& doc) {
     std::string sections;
     sections += '\0';
     sections.append((char*)doc.view().data(), doc.view().length());
@@ -892,6 +892,7 @@ stdx::optional<bsoncxx::document::value> Collection::find_one_and_update(bsoncxx
     }
     bsoncxx::document::view view = GetViewFromRawBody(response.sections());
     if (view["value"].type() == bsoncxx::type::k_null) {
+        LOG(INFO) << "view: " << bsoncxx::to_json(view);
         return stdx::nullopt;
     }
     return bsoncxx::document::value(view);
