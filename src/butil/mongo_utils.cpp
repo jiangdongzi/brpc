@@ -310,6 +310,99 @@ const stdx::optional<bool>& insert::ordered() const {
     return _ordered;
 }
 
+find_one_and_update& find_one_and_update::bypass_document_validation(
+    bool bypass_document_validation) {
+    _bypass_document_validation = bypass_document_validation;
+    return *this;
+}
+
+find_one_and_update& find_one_and_update::collation(
+    bsoncxx::v_noabi::document::view_or_value collation) {
+    _collation = std::move(collation);
+    return *this;
+}
+
+find_one_and_update& find_one_and_update::let(bsoncxx::v_noabi::document::view_or_value let) {
+    _let = let;
+    return *this;
+}
+
+
+find_one_and_update& find_one_and_update::max_time(std::chrono::milliseconds max_time) {
+    _max_time = std::move(max_time);
+    return *this;
+}
+
+find_one_and_update& find_one_and_update::projection(
+    bsoncxx::v_noabi::document::view_or_value projection) {
+    _projection = std::move(projection);
+    return *this;
+}
+
+find_one_and_update& find_one_and_update::return_document(
+    butil::mongo::options::return_document return_document) {
+    _return_document = return_document;
+    return *this;
+}
+
+find_one_and_update& find_one_and_update::sort(bsoncxx::v_noabi::document::view_or_value ordering) {
+    _ordering = std::move(ordering);
+    return *this;
+}
+
+find_one_and_update& find_one_and_update::upsert(bool upsert) {
+    _upsert = upsert;
+    return *this;
+}
+
+const stdx::optional<bool>& find_one_and_update::bypass_document_validation() const {
+    return _bypass_document_validation;
+}
+
+const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find_one_and_update::collation()
+    const {
+    return _collation;
+}
+
+
+const stdx::optional<bsoncxx::v_noabi::document::view_or_value> find_one_and_update::let() const {
+    return _let;
+}
+
+const stdx::optional<std::chrono::milliseconds>& find_one_and_update::max_time() const {
+    return _max_time;
+}
+
+const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find_one_and_update::projection()
+    const {
+    return _projection;
+}
+
+const stdx::optional<return_document>& find_one_and_update::return_document() const {
+    return _return_document;
+}
+
+const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find_one_and_update::sort() const {
+    return _ordering;
+}
+
+const stdx::optional<bool>& find_one_and_update::upsert() const {
+    return _upsert;
+}
+
+find_one_and_update& find_one_and_update::array_filters(
+    bsoncxx::v_noabi::array::view_or_value array_filters) {
+    _array_filters = std::move(array_filters);
+    return *this;
+}
+
+const stdx::optional<bsoncxx::v_noabi::array::view_or_value>& find_one_and_update::array_filters()
+    const {
+    return _array_filters;
+}
+
+
+
 } //namespace options
 
 static void build_find_options_document(const options::find& options, bsoncxx::v_noabi::builder::basic::document* doc) {
@@ -374,6 +467,46 @@ static void build_find_options_document(const options::find& options, bsoncxx::v
 
     if (const auto& sort = options.sort()) {
         doc->append(kvp("sort", bsoncxx::v_noabi::types::b_document{*sort}));
+    }
+}
+
+static void build_find_one_and_update_options_document(const options::find_one_and_update& options, bsoncxx::v_noabi::builder::basic::document* doc) {
+
+    using bsoncxx::v_noabi::builder::basic::kvp;
+        if (const auto& collation = options.collation()) {
+        doc->append(kvp("collation", *collation));
+    }
+
+    if (const auto& af = options.array_filters()) {
+        doc->append(kvp("arrayFilters", *af));
+    }
+
+    if (const auto& let = options.let()) {
+        doc->append(kvp("let", *let));
+    }
+    
+    if (const auto& st = options.sort()) {
+        doc->append(kvp("sort", *st));
+    }
+
+    if (const auto& upsert = options.upsert()) {
+        doc->append(kvp("upsert", *upsert));
+    }
+
+    if (const auto& max_time = options.max_time()) {
+        doc->append(kvp("maxTimeMS", bsoncxx::v_noabi::types::b_int64{max_time->count()}));
+    }
+
+    if (const auto& rd = options.return_document()) {
+        doc->append(kvp("new", rd.value() == butil::mongo::options::return_document::k_after));
+    }
+
+    if (const auto& bdv = options.bypass_document_validation()) {
+        doc->append(kvp("bypassDocumentValidation", *bdv));
+    }
+
+    if (const auto& prj = options.projection()) {
+        doc->append(kvp("fields", *prj));
     }
 }
 
@@ -735,6 +868,44 @@ void Collection::async_update_one(bsoncxx::document::view_or_value filter, bsonc
     google::protobuf::Closure* done = brpc::NewCallback(
             &LOGMongoResponse, cntl, response);
     database->client->channel->CallMethod(NULL, cntl, &request, response, done);
+}
+
+stdx::optional<bsoncxx::document::value> Collection::find_one_and_update(bsoncxx::document::view_or_value query, bsoncxx::document::view_or_value update,  const options::find_one_and_update& opts) {
+    using namespace bsoncxx::builder::basic;
+    document fauo_doc;
+    fauo_doc.append(kvp("findAndModify", name));
+    fauo_doc.append(kvp("query", query));
+    fauo_doc.append(kvp("update", update));
+    build_find_one_and_update_options_document(opts, &fauo_doc);
+    fauo_doc.append(kvp("$db", database->name));
+    brpc::policy::MongoRequest request;
+    AddDoc2Request(fauo_doc, &request);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
+
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    cntl.set_request_code(GetPrimaryPreferredRequestCode());
+    database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return make_document(kvp("n", "0"), kvp("ok", 0.0), kvp("err", cntl.ErrorText()));
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
+    if (view["value"].type() == bsoncxx::type::k_null) {
+        return stdx::nullopt;
+    }
+    return bsoncxx::document::value(view);
+}
+
+stdx::optional<bsoncxx::document::value> Collection::find_one(bsoncxx::document::view_or_value filter, options::find opts) {
+    opts.limit(1);
+    Cursor cursor = find(filter, opts);
+    if (cursor.begin() == cursor.end()) {
+        return stdx::nullopt;
+    }
+    stdx::optional<bsoncxx::document::value> ret;
+    ret.emplace(cursor.begin()->get_document().value);
+    return ret;
 }
 
 } // namespace mongo

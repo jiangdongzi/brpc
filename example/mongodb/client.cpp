@@ -66,27 +66,28 @@ int main(int argc, char* argv[]) {
     // Channel is thread-safe and can be shared by all threads in your program.
 
     butil::mongo::Client client(FLAGS_server);
-    auto col = client["myDatabase"]["test"];
+    auto col = client["testdb"]["test"];
     bsoncxx::builder::basic::document doc;
     butil::mongo::options::find opt{};
-    opt.batch_size(2);
-    auto views = col.find(doc.view(), opt);
-    for (auto&& view : views) {
-        std::cout << "ivyjxj::" << bsoncxx::to_json(view) << std::endl;
+    auto ret = col.find_one(doc.view());
+    if (ret) {
+        LOG(INFO) << bsoncxx::to_json(*ret);
     }
     using namespace bsoncxx::builder::basic;
     bsoncxx::builder::basic::document query{};
-    query.append(bsoncxx::builder::basic::kvp("name", "ivyjxjh"));
+    query.append(bsoncxx::builder::basic::kvp("name", "lice"));
 
     // 构建更新操作
     bsoncxx::builder::basic::document update{};
     update.append(bsoncxx::builder::basic::kvp("$set", 
                 bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("age", 527)
+                    bsoncxx::builder::basic::kvp("age", 57)
                 )));
     butil::mongo::options::update opt_update{};
     // opt_update.upsert(true);
-    col.async_update_one(query.view(), update.view(), opt_update);
+    butil::mongo::options::find_one_and_update opts;
+    ret = col.find_one_and_update(query.view(), update.view(), opts);
+    LOG(INFO) << bsoncxx::to_json(*ret);
     bthread_usleep(1000 * 1000 * 10);
     return 0;
 }
