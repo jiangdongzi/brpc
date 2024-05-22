@@ -176,7 +176,7 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
         if (it != view.end()) {
             auto hosts_arr = it->get_array().value;
             for (auto host : hosts_arr) {
-                hosts.emplace_back(host.get_string().value.to_string());
+                hosts.emplace_back(host.get_utf8().value.to_string());
             }
         }
     }
