@@ -248,14 +248,6 @@ int MongoAuthenticator::AuthSCRAMSHA1(Controller* raw_cntl) const{
     cntl.GetSendingSock()->Write(&buf, &wopt);
     CHECK_EQ(0, bthread_id_unlock(cid));
     Join(cid);
-    if (rc != 0) {
-        LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
-            << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
-        return -1;
-    }
-    cntl.GetSendingSock()->Write(&buf, &wopt);
-    bthread_id_unlock(cid);
-    Join(cid);
 
     const std::string second_payload_str = GetPayload(response.sections());
     LOG(INFO) << "second_payload_str: " << second_payload_str;
