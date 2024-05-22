@@ -895,7 +895,7 @@ stdx::optional<bsoncxx::document::value> Collection::find_one_and_update(bsoncxx
         LOG(INFO) << "view: " << bsoncxx::to_json(view);
         return stdx::nullopt;
     }
-    return bsoncxx::document::value(view);
+    return bsoncxx::document::value(view["value"].get_document().value);
 }
 
 stdx::optional<bsoncxx::document::value> Collection::find_one(bsoncxx::document::view_or_value filter, options::find opts) {
