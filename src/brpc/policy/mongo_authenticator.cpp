@@ -92,7 +92,7 @@ static std::string GetPayload(const std::string& data) {
     bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(data);
     auto it = view.find("errmsg");
     if (it != view.end()) {
-        LOG(ERROR) << "errmsg: " << it->get_string().value.to_string() << ", code" << view["code"].get_int32().value;
+        LOG(ERROR) << "errmsg: " << it->get_utf8().value.to_string() << ", code" << view["code"].get_int32().value;
         return "";
     }
     auto v = view["payload"].get_binary();
