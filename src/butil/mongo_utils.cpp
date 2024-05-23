@@ -656,7 +656,7 @@ Cursor Collection::find(bsoncxx::document::view_or_value filter, const options::
     find_opt_doc.append(bsoncxx::builder::basic::kvp("$db", database->name));
     if (database->client->read_slave_preferred) {
         find_opt_doc.append(
-            bsoncxx::builder::basic::kvp("readPreference",
+            bsoncxx::builder::basic::kvp("$readPreference",
                 bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp("mode", "secondaryPreferred")
                 )

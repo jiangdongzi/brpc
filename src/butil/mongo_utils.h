@@ -253,6 +253,9 @@ public:
         if (!initialized) {
             get_first_batch();
         }
+        if (docs.begin() == docs.end()) {
+            return Iterator(nullptr, docs.end());
+        }
         return Iterator(this, docs.begin());
     }
 
