@@ -46,21 +46,21 @@ namespace options {
 struct update {
     update& bypass_document_validation(bool bypass_document_validation);
     const stdx::optional<bool>& bypass_document_validation() const;
-    update& collation(bsoncxx::v_noabi::document::view_or_value collation);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& collation() const;
-    update& let(bsoncxx::v_noabi::document::view_or_value let);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value> let() const;
+    update& collation(bsoncxx::document::view_or_value collation);
+    const stdx::optional<bsoncxx::document::view_or_value>& collation() const;
+    update& let(bsoncxx::document::view_or_value let);
+    const stdx::optional<bsoncxx::document::view_or_value> let() const;
     update& upsert(bool upsert);
     const stdx::optional<bool>& upsert() const;
-    update& array_filters(bsoncxx::v_noabi::array::view_or_value array_filters);
-    const stdx::optional<bsoncxx::v_noabi::array::view_or_value>& array_filters() const;
+    update& array_filters(bsoncxx::array::view_or_value array_filters);
+    const stdx::optional<bsoncxx::array::view_or_value>& array_filters() const;
 
 private:
     stdx::optional<bool> _bypass_document_validation;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _collation;
+    stdx::optional<bsoncxx::document::view_or_value> _collation;
     stdx::optional<bool> _upsert;
-    stdx::optional<bsoncxx::v_noabi::array::view_or_value> _array_filters;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _let;
+    stdx::optional<bsoncxx::array::view_or_value> _array_filters;
+    stdx::optional<bsoncxx::document::view_or_value> _let;
 };
 
 struct insert {
@@ -82,53 +82,53 @@ class find {
     const stdx::optional<bool>& allow_partial_results() const;
     find& batch_size(std::int32_t batch_size);
     const stdx::optional<std::int32_t>& batch_size() const;
-    find& collation(bsoncxx::v_noabi::document::view_or_value collation);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& collation() const;
-    find& let(bsoncxx::v_noabi::document::view_or_value let);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value> let() const;
+    find& collation(bsoncxx::document::view_or_value collation);
+    const stdx::optional<bsoncxx::document::view_or_value>& collation() const;
+    find& let(bsoncxx::document::view_or_value let);
+    const stdx::optional<bsoncxx::document::view_or_value> let() const;
     find& limit(std::int64_t limit);
     const stdx::optional<std::int64_t>& limit() const;
-    find& max(bsoncxx::v_noabi::document::view_or_value max);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& max() const;
+    find& max(bsoncxx::document::view_or_value max);
+    const stdx::optional<bsoncxx::document::view_or_value>& max() const;
     find& max_await_time(std::chrono::milliseconds max_await_time);
     const stdx::optional<std::chrono::milliseconds>& max_await_time() const;
     find& max_time(std::chrono::milliseconds max_time);
     const stdx::optional<std::chrono::milliseconds>& max_time() const;
-    find& min(bsoncxx::v_noabi::document::view_or_value min);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& min() const;
+    find& min(bsoncxx::document::view_or_value min);
+    const stdx::optional<bsoncxx::document::view_or_value>& min() const;
     find& no_cursor_timeout(bool no_cursor_timeout);
     const stdx::optional<bool>& no_cursor_timeout() const;
-    find& projection(bsoncxx::v_noabi::document::view_or_value projection);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& projection() const;
-    find& read_preference(bsoncxx::v_noabi::document::view_or_value rp);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& read_preference() const;
+    find& projection(bsoncxx::document::view_or_value projection);
+    const stdx::optional<bsoncxx::document::view_or_value>& projection() const;
+    find& read_preference(bsoncxx::document::view_or_value rp);
+    const stdx::optional<bsoncxx::document::view_or_value>& read_preference() const;
     find& return_key(bool return_key);
     const stdx::optional<bool>& return_key() const;
     find& show_record_id(bool show_record_id);
     const stdx::optional<bool>& show_record_id() const;
     find& skip(std::int64_t skip);
     const stdx::optional<std::int64_t>& skip() const;
-    find& sort(bsoncxx::v_noabi::document::view_or_value ordering);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& sort() const;
+    find& sort(bsoncxx::document::view_or_value ordering);
+    const stdx::optional<bsoncxx::document::view_or_value>& sort() const;
 
    private:
     stdx::optional<bool> _allow_disk_use;
     stdx::optional<bool> _allow_partial_results;
     stdx::optional<std::int32_t> _batch_size;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _collation;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _let;
+    stdx::optional<bsoncxx::document::view_or_value> _collation;
+    stdx::optional<bsoncxx::document::view_or_value> _let;
     stdx::optional<std::int64_t> _limit;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _max;
+    stdx::optional<bsoncxx::document::view_or_value> _max;
     stdx::optional<std::chrono::milliseconds> _max_await_time;
     stdx::optional<std::chrono::milliseconds> _max_time;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _min;
+    stdx::optional<bsoncxx::document::view_or_value> _min;
     stdx::optional<bool> _no_cursor_timeout;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _projection;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _read_preference;
+    stdx::optional<bsoncxx::document::view_or_value> _projection;
+    stdx::optional<bsoncxx::document::view_or_value> _read_preference;
     stdx::optional<bool> _return_key;
     stdx::optional<bool> _show_record_id;
     stdx::optional<std::int64_t> _skip;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _ordering;
+    stdx::optional<bsoncxx::document::view_or_value> _ordering;
 };
 
 enum class return_document {
@@ -140,35 +140,35 @@ enum class return_document {
 
 class find_one_and_update {
   public:
-    find_one_and_update& collation(bsoncxx::v_noabi::document::view_or_value collation);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& collation() const;
+    find_one_and_update& collation(bsoncxx::document::view_or_value collation);
+    const stdx::optional<bsoncxx::document::view_or_value>& collation() const;
     find_one_and_update& bypass_document_validation(bool bypass_document_validation);
     const stdx::optional<bool>& bypass_document_validation() const;
-    find_one_and_update& let(bsoncxx::v_noabi::document::view_or_value let);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value> let() const;
+    find_one_and_update& let(bsoncxx::document::view_or_value let);
+    const stdx::optional<bsoncxx::document::view_or_value> let() const;
     find_one_and_update& max_time(std::chrono::milliseconds max_time);
     const stdx::optional<std::chrono::milliseconds>& max_time() const;
-    find_one_and_update& projection(bsoncxx::v_noabi::document::view_or_value projection);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& projection() const;
+    find_one_and_update& projection(bsoncxx::document::view_or_value projection);
+    const stdx::optional<bsoncxx::document::view_or_value>& projection() const;
     find_one_and_update& return_document(return_document return_document);
     const stdx::optional<butil::mongo::options::return_document>& return_document() const;
-    find_one_and_update& sort(bsoncxx::v_noabi::document::view_or_value ordering);
-    const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& sort() const;
+    find_one_and_update& sort(bsoncxx::document::view_or_value ordering);
+    const stdx::optional<bsoncxx::document::view_or_value>& sort() const;
     find_one_and_update& upsert(bool upsert);
     const stdx::optional<bool>& upsert() const;
-    find_one_and_update& array_filters(bsoncxx::v_noabi::array::view_or_value array_filters);
-    const stdx::optional<bsoncxx::v_noabi::array::view_or_value>& array_filters() const;
+    find_one_and_update& array_filters(bsoncxx::array::view_or_value array_filters);
+    const stdx::optional<bsoncxx::array::view_or_value>& array_filters() const;
 
    private:
     stdx::optional<bool> _bypass_document_validation;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _collation;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _let;
+    stdx::optional<bsoncxx::document::view_or_value> _collation;
+    stdx::optional<bsoncxx::document::view_or_value> _let;
     stdx::optional<std::chrono::milliseconds> _max_time;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _projection;
+    stdx::optional<bsoncxx::document::view_or_value> _projection;
     stdx::optional<butil::mongo::options::return_document> _return_document;
-    stdx::optional<bsoncxx::v_noabi::document::view_or_value> _ordering;
+    stdx::optional<bsoncxx::document::view_or_value> _ordering;
     stdx::optional<bool> _upsert;
-    stdx::optional<bsoncxx::v_noabi::array::view_or_value> _array_filters;
+    stdx::optional<bsoncxx::array::view_or_value> _array_filters;
 };
 
 } // namespace options
