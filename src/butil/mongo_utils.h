@@ -1,5 +1,6 @@
 #include "brpc/channel.h"
 #include "brpc/policy/mongo.pb.h"
+#include "bsoncxx/builder/basic/array.hpp"
 #include <cstdint>
 #include <butil/optional.h>
 #include <string>
@@ -288,6 +289,33 @@ public:
     void async_update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts = options::update());
     bsoncxx::builder::basic::document find_opt_doc;
     stdx::optional<bsoncxx::document::value> find_one_and_update(bsoncxx::document::view_or_value query, bsoncxx::document::view_or_value update,  const options::find_one_and_update& opts = options::find_one_and_update());
+
+    class BulkUpdate {
+        bsoncxx::builder::basic::array updates;
+        Collection* col;
+    public:
+        BulkUpdate(Collection* c) : col(c) {}
+        void append(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,
+            const options::update& opts = options::update());
+        bsoncxx::document::value execute();
+    };
+    BulkUpdate CreateBulkUpdate() {
+        return BulkUpdate(this);
+    }
+    class BulkInsert {
+        bsoncxx::builder::basic::array docs;
+        Collection* col;
+        options::insert opts;
+    public:
+        BulkInsert(Collection* c, const options::insert& o = options::insert()) : col(c), opts(o) {}
+        void append(bsoncxx::document::view_or_value doc);
+        bsoncxx::document::value execute();
+    };
+
+    BulkInsert CreateBulkInsert(const options::insert& opts = options::insert()) {
+        return BulkInsert(this, opts);
+    }
+
 private:
     brpc::policy::MongoRequest create_insert_requet(const bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
     brpc::policy::MongoRequest create_update_requet(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,

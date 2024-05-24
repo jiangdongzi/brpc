@@ -32,6 +32,7 @@
 #include <brpc/policy/couchbase_authenticator.h>
 #include "brpc/options.pb.h"
 #include "brpc/policy/mongo.pb.h"
+#include "bsoncxx/builder/basic/array.hpp"
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/types.hpp>
 #include <bsoncxx/document/view.hpp>
@@ -65,31 +66,18 @@ int main(int argc, char* argv[]) {
     // A Channel represents a communication line to a Server. Notice that 
     // Channel is thread-safe and can be shared by all threads in your program.
 
+    using bsoncxx::builder::basic::kvp;
     butil::mongo::Client client(FLAGS_server);
     auto col = client["testdb"]["test"];
-    bsoncxx::builder::basic::document doc;
-    butil::mongo::options::find opt{};
-    auto ret = col.find_one(doc.view());
-    if (ret) {
-        LOG(INFO) << bsoncxx::to_json(*ret);
-    }
-    using namespace bsoncxx::builder::basic;
-    bsoncxx::builder::basic::document query{};
-    query.append(bsoncxx::builder::basic::kvp("name", "lice"));
+    auto bi = col.CreateBulkInsert();
+    bsoncxx::builder::basic::document filter;
+    filter.append(bsoncxx::builder::basic::kvp("name", "ivy"));
+    bi.append(filter.view());
+    filter.clear();
+    filter.append(bsoncxx::builder::basic::kvp("name", "jxj"));
+    bi.append(filter.view());
+    auto ret = bi.execute();
 
-    // 构建更新操作
-    bsoncxx::builder::basic::document update{};
-    update.append(bsoncxx::builder::basic::kvp("$set", 
-                bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("age", 57)
-                )));
-    butil::mongo::options::update opt_update{};
-    // opt_update.upsert(true);
-    butil::mongo::options::find_one_and_update opts;
-    ret = col.find_one_and_update(query.view(), update.view(), opts);
-    if (ret) {
-        LOG(INFO) << bsoncxx::to_json(*ret);
-    }
-    bthread_usleep(1000 * 1000 * 10);
+    LOG(INFO) << bsoncxx::to_json(ret);
     return 0;
 }
