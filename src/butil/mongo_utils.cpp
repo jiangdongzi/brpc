@@ -895,7 +895,7 @@ stdx::optional<bsoncxx::document::value> Collection::find_one_and_update(bsoncxx
         LOG(INFO) << "view: " << bsoncxx::to_json(view);
         return stdx::nullopt;
     }
-    return bsoncxx::document::value(view["value"].get_document().value);
+    return bsoncxx::document::value(view["value"].get_document().view());
 }
 
 stdx::optional<bsoncxx::document::value> Collection::find_one(bsoncxx::document::view_or_value filter, options::find opts) {
@@ -907,6 +907,61 @@ stdx::optional<bsoncxx::document::value> Collection::find_one(bsoncxx::document:
     stdx::optional<bsoncxx::document::value> ret;
     ret.emplace(cursor.begin()->get_document().value);
     return ret;
+}
+
+void Collection::BulkUpdate::append(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update, const options::update& opts) {
+    using namespace bsoncxx::builder::basic;
+    document update_one_ele;
+    update_one_ele.append(kvp("q", filter));
+    update_one_ele.append(kvp("u", update));
+    build_update_options_document(opts, &update_one_ele);
+    updates.append(update_one_ele);
+}
+
+bsoncxx::document::value Collection::BulkUpdate::execute() {
+    using namespace bsoncxx::builder::basic;
+    document bulk_update_doc;
+    bulk_update_doc.append(kvp("update", col->name));
+    bulk_update_doc.append(kvp("updates", updates));
+    bulk_update_doc.append(kvp("$db", col->database->name));
+    brpc::policy::MongoRequest request;
+    AddDoc2Request(bulk_update_doc, &request);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    cntl.set_request_code(GetPrimaryPreferredRequestCode());
+    col->database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return make_document(kvp("n", "0"), kvp("ok", 0.0), kvp("err", cntl.ErrorText()));
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
+    return bsoncxx::document::value(view);
+}
+
+void Collection::BulkInsert::append(bsoncxx::document::view_or_value doc) {
+    docs.append(doc);
+}
+
+bsoncxx::document::value Collection::BulkInsert::execute() {
+    using namespace bsoncxx::builder::basic;
+    document bulk_insert_doc;
+    bulk_insert_doc.append(kvp("insert", col->name));
+    bulk_insert_doc.append(kvp("documents", docs));
+    bulk_insert_doc.append(kvp("$db", col->database->name));
+    brpc::policy::MongoRequest request;
+    AddDoc2Request(bulk_insert_doc, &request);
+    request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
+    brpc::policy::MongoResponse response;
+    brpc::Controller cntl;
+    cntl.set_request_code(GetPrimaryPreferredRequestCode());
+    col->database->client->channel->CallMethod(NULL, &cntl, &request, &response, NULL);
+    if (cntl.Failed()) {
+        LOG(ERROR) << "Fail to access mongo, " << cntl.ErrorText();
+        return make_document(kvp("n", "0"), kvp("ok", 0.0), kvp("err", cntl.ErrorText()));
+    }
+    bsoncxx::document::view view = GetViewFromRawBody(response.sections());
+    return bsoncxx::document::value(view);
 }
 
 } // namespace mongo
