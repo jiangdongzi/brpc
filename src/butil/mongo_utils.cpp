@@ -317,12 +317,12 @@ find_one_and_update& find_one_and_update::bypass_document_validation(
 }
 
 find_one_and_update& find_one_and_update::collation(
-    bsoncxx::v_noabi::document::view_or_value collation) {
+    bsoncxx::document::view_or_value collation) {
     _collation = std::move(collation);
     return *this;
 }
 
-find_one_and_update& find_one_and_update::let(bsoncxx::v_noabi::document::view_or_value let) {
+find_one_and_update& find_one_and_update::let(bsoncxx::document::view_or_value let) {
     _let = let;
     return *this;
 }
@@ -334,7 +334,7 @@ find_one_and_update& find_one_and_update::max_time(std::chrono::milliseconds max
 }
 
 find_one_and_update& find_one_and_update::projection(
-    bsoncxx::v_noabi::document::view_or_value projection) {
+    bsoncxx::document::view_or_value projection) {
     _projection = std::move(projection);
     return *this;
 }
@@ -345,7 +345,7 @@ find_one_and_update& find_one_and_update::return_document(
     return *this;
 }
 
-find_one_and_update& find_one_and_update::sort(bsoncxx::v_noabi::document::view_or_value ordering) {
+find_one_and_update& find_one_and_update::sort(bsoncxx::document::view_or_value ordering) {
     _ordering = std::move(ordering);
     return *this;
 }
@@ -359,13 +359,13 @@ const stdx::optional<bool>& find_one_and_update::bypass_document_validation() co
     return _bypass_document_validation;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find_one_and_update::collation()
+const stdx::optional<bsoncxx::document::view_or_value>& find_one_and_update::collation()
     const {
     return _collation;
 }
 
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value> find_one_and_update::let() const {
+const stdx::optional<bsoncxx::document::view_or_value> find_one_and_update::let() const {
     return _let;
 }
 
@@ -373,7 +373,7 @@ const stdx::optional<std::chrono::milliseconds>& find_one_and_update::max_time()
     return _max_time;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find_one_and_update::projection()
+const stdx::optional<bsoncxx::document::view_or_value>& find_one_and_update::projection()
     const {
     return _projection;
 }
@@ -382,7 +382,7 @@ const stdx::optional<return_document>& find_one_and_update::return_document() co
     return _return_document;
 }
 
-const stdx::optional<bsoncxx::v_noabi::document::view_or_value>& find_one_and_update::sort() const {
+const stdx::optional<bsoncxx::document::view_or_value>& find_one_and_update::sort() const {
     return _ordering;
 }
 
@@ -391,12 +391,12 @@ const stdx::optional<bool>& find_one_and_update::upsert() const {
 }
 
 find_one_and_update& find_one_and_update::array_filters(
-    bsoncxx::v_noabi::array::view_or_value array_filters) {
+    bsoncxx::array::view_or_value array_filters) {
     _array_filters = std::move(array_filters);
     return *this;
 }
 
-const stdx::optional<bsoncxx::v_noabi::array::view_or_value>& find_one_and_update::array_filters()
+const stdx::optional<bsoncxx::array::view_or_value>& find_one_and_update::array_filters()
     const {
     return _array_filters;
 }
@@ -470,9 +470,9 @@ static void build_find_options_document(const options::find& options, bsoncxx::b
     }
 }
 
-static void build_find_one_and_update_options_document(const options::find_one_and_update& options, bsoncxx::v_noabi::builder::basic::document* doc) {
+static void build_find_one_and_update_options_document(const options::find_one_and_update& options, bsoncxx::builder::basic::document* doc) {
 
-    using bsoncxx::v_noabi::builder::basic::kvp;
+    using bsoncxx::builder::basic::kvp;
         if (const auto& collation = options.collation()) {
         doc->append(kvp("collation", *collation));
     }
@@ -494,7 +494,7 @@ static void build_find_one_and_update_options_document(const options::find_one_a
     }
 
     if (const auto& max_time = options.max_time()) {
-        doc->append(kvp("maxTimeMS", bsoncxx::v_noabi::types::b_int64{max_time->count()}));
+        doc->append(kvp("maxTimeMS", bsoncxx::types::b_int64{max_time->count()}));
     }
 
     if (const auto& rd = options.return_document()) {
