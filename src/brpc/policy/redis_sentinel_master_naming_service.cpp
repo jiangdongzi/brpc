@@ -30,7 +30,7 @@
 namespace brpc {
 namespace policy {
 
-int RedisReplicaNamingService::GetServers(const char *service_and_token, std::vector<ServerNode> *servers) {
+int RedisSentinelMasterNamingService::GetServers(const char *service_and_token, std::vector<ServerNode> *servers) {
     servers->clear();
 
     std::vector<std::string> out;
@@ -92,14 +92,14 @@ int RedisReplicaNamingService::GetServers(const char *service_and_token, std::ve
     return 0;
 }
 
-void RedisReplicaNamingService::Describe(std::ostream &os, const DescribeOptions &) const {
-    os << "redis_replica";
+void RedisSentinelMasterNamingService::Describe(std::ostream &os, const DescribeOptions &) const {
+    os << "redis_sentinel_slave";
     return;
 }
 
-NamingService *RedisReplicaNamingService::New() const { return new RedisReplicaNamingService; }
+NamingService *RedisSentinelMasterNamingService::New() const { return new RedisSentinelMasterNamingService; }
 
-void RedisReplicaNamingService::Destroy() { delete this; }
+void RedisSentinelMasterNamingService::Destroy() { delete this; }
 
 } // namespace policy
 } // namespace brpc

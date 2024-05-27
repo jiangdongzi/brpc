@@ -23,7 +23,7 @@
 namespace brpc {
 namespace policy {
 
-class RedisSentinelMasterNamingService : public PeriodicNamingService {
+class RedisReplicaNamingService : public PeriodicNamingService {
   public:
 
   private:

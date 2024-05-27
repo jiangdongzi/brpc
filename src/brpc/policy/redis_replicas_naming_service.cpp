@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "brpc/policy/redis_sentinel_master_naming_service.h"
+#include "brpc/policy/redis_replicas_naming_service.h"
 #include <brpc/policy/redis_authenticator.h>
-#include "brpc/log.h"
-#include "bthread/bthread.h"
 #include "butil/strings/string_split.h"
 #include <gflags/gflags.h>
 #include <brpc/channel.h>
@@ -47,7 +45,7 @@ static std::string extractSlaveAddresses(const std::string& replicationInfo) {
     return "";
 }
 
-int RedisSentinelMasterNamingService::GetServers(const char *service_and_token, std::vector<ServerNode> *servers) {
+int RedisReplicaNamingService::GetServers(const char *service_and_token, std::vector<ServerNode> *servers) {
     servers->clear();
 
     std::vector<std::string> out;
@@ -108,14 +106,14 @@ int RedisSentinelMasterNamingService::GetServers(const char *service_and_token, 
     return 0;
 }
 
-void RedisSentinelMasterNamingService::Describe(std::ostream &os, const DescribeOptions &) const {
+void RedisReplicaNamingService::Describe(std::ostream &os, const DescribeOptions &) const {
     os << "redis_sentinel_slave";
     return;
 }
 
-NamingService *RedisSentinelMasterNamingService::New() const { return new RedisSentinelMasterNamingService; }
+NamingService *RedisReplicaNamingService::New() const { return new RedisReplicaNamingService; }
 
-void RedisSentinelMasterNamingService::Destroy() { delete this; }
+void RedisReplicaNamingService::Destroy() { delete this; }
 
 } // namespace policy
 } // namespace brpc
