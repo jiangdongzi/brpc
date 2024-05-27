@@ -43,6 +43,7 @@
 #include "brpc/policy/redis_sentinel_slave_naming_service.h"
 #include "brpc/policy/redis_sentinel_master_naming_service.h"
 #include "brpc/policy/mongo_naming_service.h"
+#include "brpc/policy/redis_replicas_naming_service.h"
 
 // Load Balancers
 #include "brpc/policy/round_robin_load_balancer.h"
@@ -153,6 +154,7 @@ struct GlobalExtensions {
     RedisSentinelSlaveNamingService rssns;
     RedisSentinelMasterNamingService rsmns;
     MongoNamingService mns;
+    RedisReplicaNamingService rrns;
 
     RoundRobinLoadBalancer rr_lb;
     WeightedRoundRobinLoadBalancer wrr_lb;
@@ -391,6 +393,7 @@ static void GlobalInitializeOrDieImpl() {
     NamingServiceExtension()->RegisterOrDie("redis_sentinel_slave", &g_ext->rssns);
     NamingServiceExtension()->RegisterOrDie("redis_sentinel_master", &g_ext->rsmns);
     NamingServiceExtension()->RegisterOrDie("mongodb", &g_ext->mns);
+    NamingServiceExtension()->RegisterOrDie("redis_replica", &g_ext->rrns);
 
     // Load Balancers
     LoadBalancerExtension()->RegisterOrDie("rr", &g_ext->rr_lb);
