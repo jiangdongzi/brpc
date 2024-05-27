@@ -611,13 +611,9 @@ MongoServersMode Client::GetMongoServersMode(const std::string& mongo_uri_str) {
     LOG(INFO) << "view: " << bsoncxx::to_json(view);
     auto vit = view.find("setName");
     if (vit != view.end()) {
-        if (vit->get_utf8().value.to_string() == "rs") {
-            tls_server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
-            server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
-            return MongoServersMode::kReplicaSet;
-        } else {
-            throw std::runtime_error("Unsupported server mode");
-        }
+        tls_server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
+        server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
+        return MongoServersMode::kReplicaSet;
     }
     vit = view.find("msg");
     if (vit != view.end()) {
