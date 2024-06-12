@@ -433,7 +433,7 @@ void SetPossibleGoAwayStreamId (const int stream_id, const SocketId socket_id) {
     if (rc != 0) {
         return;
     }
-    tmp_sock->possible_h2_max_stream_id = stream_id - 2;
+    tmp_sock->possible_h2_max_stream_id = stream_id;
 }
 
 int H2Context::TryToInsertStream(int stream_id, H2StreamContext* ctx) {

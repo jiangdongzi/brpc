@@ -1,5 +1,6 @@
 #include <bvar/mico_bvar.h>
 #include "brpc/metric_rpc.pb.h"
+#include "bthread/bthread.h"
 #include "bvar/multi_dimension.h"
 #include <brpc/channel.h>
 
@@ -8,6 +9,7 @@ std::string brpc_get_app_name();
 bthread_t bvar_stat_tid;
 struct JoinBvarStat_tid {
   ~JoinBvarStat_tid() {
+    bthread_stop(bvar_stat_tid);
     bthread_join(bvar_stat_tid, nullptr);
   }
 };
