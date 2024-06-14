@@ -403,11 +403,13 @@ friend void InitFrameHandlers();
 };
 
 inline int H2Context::AllocateClientStreamId() {
+    LOG(INFO) << "ivyjxj: " << _last_sent_stream_id;
     return _last_sent_stream_id;
 }
 
 inline bool H2Context::RunOutStreams() {
     uint32_t stream_id = _last_sent_stream_id.fetch_add(2, std::memory_order_relaxed);
+    LOG(INFO) << "ivyjxj111: " << _last_sent_stream_id;
     return (stream_id > possible_goaway_stream_id);
 }
 
