@@ -343,6 +343,7 @@ struct BAIDU_CACHELINE_ALIGNMENT Socket::WriteRequest {
                 butil::IOBuf dummy_buf;
                 // We don't care about the return value since the request
                 // is already failed.
+                LOG(INFO) << "ivyjxj3233";
                 (void)msg->AppendAndDestroySelf(&dummy_buf, NULL);
             }
             set_pipelined_count_and_user_message(0, NULL, 0);

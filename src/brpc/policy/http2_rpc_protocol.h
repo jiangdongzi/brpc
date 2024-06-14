@@ -23,6 +23,7 @@
 #include "brpc/input_message_base.h"
 #include "brpc/protocol.h"
 #include "brpc/details/hpack.h"
+#include "brpc/socket.h"
 #include "brpc/stream_creator.h"
 #include "brpc/controller.h"
 #include <atomic>
