@@ -328,7 +328,7 @@ H2Context::H2Context(Socket* socket, const Server* server)
     , _remote_window_left(H2Settings::MAX_WINDOW_SIZE)
     , _conn_state(H2_CONNECTION_UNINITIALIZED)
     , _last_received_stream_id(-1)
-    , _last_sent_stream_id(1)
+    , _last_sent_stream_id(-1)
     , _goaway_stream_id(-1)
     , _remote_settings_received(false)
     , _deferred_window_update(0) {

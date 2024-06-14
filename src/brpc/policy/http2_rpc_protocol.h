@@ -25,6 +25,9 @@
 #include "brpc/details/hpack.h"
 #include "brpc/stream_creator.h"
 #include "brpc/controller.h"
+#include <atomic>
+#include <cstdint>
+#include <sys/types.h>
 
 #ifndef NDEBUG
 #include "bvar/bvar.h"
@@ -334,7 +337,7 @@ public:
     void Destroy() override { delete this; }
 
     int AllocateClientStreamId();
-    bool RunOutStreams() const;
+    bool RunOutStreams();
     // Try to map stream_id to ctx if stream_id does not exist before
     // Returns 0 on success, -1 on exist, 1 on goaway.
     int TryToInsertStream(int stream_id, H2StreamContext* ctx);
@@ -382,7 +385,7 @@ friend void InitFrameHandlers();
     butil::atomic<int64_t> _remote_window_left;
     H2ConnectionState _conn_state;
     int _last_received_stream_id;
-    uint32_t _last_sent_stream_id;
+    std::atomic<uint32_t> _last_sent_stream_id;
     int _goaway_stream_id;
     H2Settings _remote_settings;
     bool _remote_settings_received;
@@ -400,18 +403,12 @@ friend void InitFrameHandlers();
 };
 
 inline int H2Context::AllocateClientStreamId() {
-    if (RunOutStreams()) {
-        LOG(WARNING) << "Fail to allocate new client stream, _last_sent_stream_id="
-            << _last_sent_stream_id;
-        return -1;
-    }
-    const int id = _last_sent_stream_id;
-    _last_sent_stream_id += 2;
-    return id;
+    return _last_sent_stream_id;
 }
 
-inline bool H2Context::RunOutStreams() const {
-    return (_last_sent_stream_id >= possible_goaway_stream_id);
+inline bool H2Context::RunOutStreams() {
+    uint32_t stream_id = _last_sent_stream_id.fetch_add(2, std::memory_order_relaxed);
+    return (stream_id > possible_goaway_stream_id);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const H2UnsentRequest& req) {
