@@ -19,6 +19,7 @@
 #include "brpc/policy/http2_rpc_protocol.h"
 #include "brpc/details/controller_private_accessor.h"
 #include "brpc/server.h"
+#include "brpc/socket.h"
 #include "butil/base64.h"
 #include "brpc/log.h"
 
@@ -1844,9 +1845,8 @@ void PackH2Request(butil::IOBuf*,
     }
 }
 
-static bool IsH2SocketValid(Socket* s) {
-    H2Context* c = static_cast<H2Context*>(s->parsing_context());
-    return c == NULL || !c->RunOutStreams();
+static bool IsH2SocketValid(Socket* s, Socket* raw_socket) {
+    return s->last_sent_stream_id.fetch_add(2, butil::memory_order_relaxed) <= raw_socket->possible_h2_max_stream_id;
 }
 
 StreamUserData* H2GlobalStreamCreator::OnCreatingStream(

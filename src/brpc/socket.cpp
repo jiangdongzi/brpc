@@ -423,7 +423,9 @@ static const uint64_t AUTH_FLAG = (1ul << 32);
 
 Socket::Socket(Forbidden)
     // must be even because Address() relies on evenness of version
-    : _versioned_ref(0)
+    : possible_h2_max_stream_id (0)
+    , last_sent_stream_id (-1)
+    , _versioned_ref(0)
     , _shared_part(NULL)
     , _nevent(0)
     , _keytable_pool(NULL)
@@ -467,7 +469,6 @@ Socket::Socket(Forbidden)
     , _stream_set(NULL)
     , _total_streams_unconsumed_size(0)
     , _ninflight_app_health_check(0)
-    , possible_h2_max_stream_id (0)
     , _http_request_method(HTTP_METHOD_GET)
 {
     CreateVarsOnce();
@@ -2833,12 +2834,12 @@ int Socket::GetShortSocket(SocketUniquePtr* short_socket) {
     return 0;
 }
 
-int Socket::GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*)) {
+int Socket::GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*, Socket*)) {
     SocketId id = _agent_socket_id.load(butil::memory_order_relaxed);
     SocketUniquePtr tmp_sock;
     do {
         if (Socket::Address(id, &tmp_sock) == 0) {
-            if (checkfn == NULL || checkfn(tmp_sock.get())) {
+            if (checkfn == NULL || checkfn(tmp_sock.get(), this)) {
                 out->swap(tmp_sock);
                 return 0;
             }
@@ -2849,7 +2850,7 @@ int Socket::GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*)) {
                 LOG(ERROR) << "Fail to get short socket from " << *this;
                 return -1;
             }
-            if (checkfn == NULL || checkfn(tmp_sock.get())) {
+            if (checkfn == NULL || checkfn(tmp_sock.get(), this)) {
                 break;
             }
             tmp_sock->ReleaseAdditionalReference();

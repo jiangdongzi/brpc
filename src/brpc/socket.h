@@ -19,6 +19,7 @@
 #ifndef BRPC_SOCKET_H
 #define BRPC_SOCKET_H
 
+#include <atomic>
 #include <iostream>                            // std::ostream
 #include <deque>                               // std::deque
 #include <set>                                 // std::set
@@ -537,7 +538,7 @@ public:
     // LoadBalancers or NamingServices that may reference the Socket, agent
     // socket can be used for the communication and replaced periodically but
     // the main socket is unchanged.
-    int GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*));
+    int GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*, Socket*));
 
     // Take a peek at existing agent socket (no creation).
     // Returns 0 on success.
@@ -589,6 +590,8 @@ public:
     HttpMethod http_request_method() const { return _http_request_method; }
 
     int possible_h2_max_stream_id;
+
+    std::atomic_int last_sent_stream_id;
 
 private:
     DISALLOW_COPY_AND_ASSIGN(Socket);
