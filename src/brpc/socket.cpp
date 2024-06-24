@@ -708,6 +708,8 @@ int Socket::Create(const SocketOptions& options, SocketId* id) {
     m->_ssl_state = (options.initial_ssl_ctx == NULL ? SSL_OFF : SSL_UNKNOWN);
     m->_ssl_session = NULL;
     m->_ssl_ctx = options.initial_ssl_ctx;
+    m->last_sent_stream_id = 1;
+    m->possible_h2_max_stream_id = 0x7FFFFFFF;
 #if BRPC_WITH_RDMA
     CHECK(m->_rdma_ep == NULL);
     if (options.use_rdma) {
