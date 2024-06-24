@@ -423,7 +423,7 @@ static const uint64_t AUTH_FLAG = (1ul << 32);
 
 Socket::Socket(Forbidden)
     // must be even because Address() relies on evenness of version
-    : possible_h2_max_stream_id (0)
+    : possible_h2_max_stream_id (0x7FFFFFFF)
     , last_sent_stream_id (-1)
     , _versioned_ref(0)
     , _shared_part(NULL)
