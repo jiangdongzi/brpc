@@ -317,6 +317,7 @@ Controller::Call::~Call() {
 
 void Controller::Call::Reset() {
     nretry = 0;
+    fake_error_try = 0;
     need_feedback = false;
     enable_circuit_breaker = false;
     peer_id = INVALID_SOCKET_ID;
@@ -601,7 +602,7 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
         return;
     }
 
-    if (_error_code == EGOAWAY || _error_code == EMOVED) {
+    if ((_error_code == EGOAWAY || _error_code == EMOVED) && _current_call.fake_error_try++ < 3) {
         _current_call.OnComplete(this, _error_code, info.responded, false);
         return IssueRPC(butil::gettimeofday_us());
     }

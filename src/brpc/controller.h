@@ -739,6 +739,7 @@ private:
         // socket fetched from socket pool
         SocketUniquePtr sending_sock;
         StreamUserData* stream_user_data;
+        int fake_error_try;
     };
 
     void HandleStreamConnection(Socket *host_socket);
