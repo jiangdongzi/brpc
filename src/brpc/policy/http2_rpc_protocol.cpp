@@ -993,6 +993,7 @@ H2ParseResult H2Context::OnGoAway(
         _socket->SetLogOff();
 
         std::vector<H2StreamContext*> goaway_streams;
+        LOG(INFO) << "GOAWAY received, last_stream_id = " << last_stream_id << ", last_sent_stream_id: " << _last_sent_stream_id;
         RemoveGoAwayStreams(last_stream_id, &goaway_streams);
         if (goaway_streams.empty()) {
             return MakeH2Message(NULL);
