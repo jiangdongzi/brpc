@@ -358,6 +358,12 @@ void ProcessHttpResponse(InputMessageBase* msg) {
             }
         }
 
+        int sc = res_header->status_code();
+        if (sc == HTTP_STATUS_SERVICE_GOAWAY) {
+            cntl->SetFailed(EGOAWAY, "Server is going away");
+            break;
+        }
+
         if (imsg_guard->read_body_progressively()) {
             // Set RPA if needed
             accessor.set_readable_progressive_attachment(imsg_guard.get());
@@ -387,7 +393,6 @@ void ProcessHttpResponse(InputMessageBase* msg) {
         
         // Fail RPC if status code is an error in http sense.
         // ErrorCode of RPC is unified to EHTTP.
-        const int sc = res_header->status_code();
         if (sc < 200 || sc >= 300) {
             std::string err = butil::string_printf(
                     "HTTP/%d.%d %d %s",

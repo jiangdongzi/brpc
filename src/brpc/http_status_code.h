@@ -677,6 +677,8 @@ static const int HTTP_STATUS_GATEWAY_TIMEOUT                 = 504;
 // that server. 
 static const int HTTP_STATUS_VERSION_NOT_SUPPORTED           = 505;
 
+static const int HTTP_STATUS_SERVICE_GOAWAY                  = 506;
+
 } // namespace brpc
 
 
