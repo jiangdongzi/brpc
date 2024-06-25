@@ -440,7 +440,6 @@ void SetPossibleGoAwayStreamId (const int stream_id, const SocketId socket_id) {
 int H2Context::TryToInsertStream(int stream_id, H2StreamContext* ctx) {
     std::unique_lock<butil::Mutex> mu(_stream_mutex);
     if (_goaway_stream_id >= 0 && stream_id > _goaway_stream_id) {
-        SetPossibleGoAwayStreamId(_goaway_stream_id, raw_socket_id);
         return 1;
     }
     H2StreamContext*& sctx = _pending_streams[stream_id];
@@ -991,6 +990,8 @@ H2ParseResult H2Context::OnGoAway(
     if (is_client_side()) {
         // The socket will not be selected for further requests.
         _socket->SetLogOff();
+
+        SetPossibleGoAwayStreamId(last_stream_id, raw_socket_id);
 
         std::vector<H2StreamContext*> goaway_streams;
         LOG(INFO) << "GOAWAY received, last_stream_id = " << last_stream_id << ", last_sent_stream_id: " << _last_sent_stream_id;
