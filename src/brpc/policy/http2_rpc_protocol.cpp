@@ -18,6 +18,7 @@
 
 #include "brpc/policy/http2_rpc_protocol.h"
 #include "brpc/details/controller_private_accessor.h"
+#include "brpc/http_status_code.h"
 #include "brpc/server.h"
 #include "brpc/socket.h"
 #include "butil/base64.h"
@@ -989,6 +990,7 @@ H2ParseResult H2Context::OnGoAway(
     // Server Push is not supported so it works fine now.
     if (is_client_side()) {
         // The socket will not be selected for further requests.
+        LOG(INFO) << "id: " << _socket->id() << " received GOAWAY, last_stream_id: " << last_stream_id;
         _socket->SetLogOff();
 
         SetPossibleGoAwayStreamId(last_stream_id, raw_socket_id);
@@ -1001,7 +1003,7 @@ H2ParseResult H2Context::OnGoAway(
         }
         for (size_t i = 0; i < goaway_streams.size(); ++i) {
             H2StreamContext* sctx = goaway_streams[i];
-            sctx->header().set_status_code(HTTP_STATUS_SERVICE_UNAVAILABLE);
+            sctx->header().set_status_code(HTTP_STATUS_SERVICE_GOAWAY);
         }
         for (size_t i = 1; i < goaway_streams.size(); ++i) {
             bthread_t th;
@@ -1849,6 +1851,9 @@ void PackH2Request(butil::IOBuf*,
 
 static bool IsH2SocketValid(Socket* s, Socket* raw_socket) {
     //LOG(INFO) << "id" << s->id() << ", last_sent_stream_id=" << s->last_sent_stream_id.load(butil::memory_order_relaxed) << ", raw_id: " << raw_socket->id() << ", possible_h2_max_stream_id=" << raw_socket->possible_h2_max_stream_id;
+    if (s->LogOff()) {
+        return false;
+    }
     return s->last_sent_stream_id.fetch_add(2, butil::memory_order_relaxed) < raw_socket->possible_h2_max_stream_id;
 }
 

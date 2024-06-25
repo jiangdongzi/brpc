@@ -348,6 +348,8 @@ public:
 
     // `user' parameter passed to Create().
     SocketUser* user() const { return _user; }
+    bool LogOff () const { return _logoff_flag.load(butil::memory_order_relaxed); }
+
 
     // `conn' parameter passed to Create()
     void set_conn(SocketConnection* conn) { _conn = conn; }

@@ -20,6 +20,7 @@
 #include <openssl/md5.h>
 #include <google/protobuf/descriptor.h>
 #include <gflags/gflags.h>
+#include "brpc/errno.pb.h"
 #include "bthread/bthread.h"
 #include "butil/build_config.h"    // OS_MACOSX
 #include "butil/string_printf.h"
@@ -600,8 +601,7 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
         return;
     }
 
-    if (saved_error == EMOVED) {
-        //todo set real serverid....
+    if (_error_code == EGOAWAY || _error_code == EMOVED) {
         _current_call.OnComplete(this, _error_code, info.responded, false);
         return IssueRPC(butil::gettimeofday_us());
     }
