@@ -567,7 +567,6 @@ brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
         LOG(ERROR) << "Fail to initialize channel";
         throw std::runtime_error("Fail to initialize channel");
     }
-    delete options.auth;
     channels[mongo_uri].reset(channel_up.release());
     return channels[mongo_uri].get();
 }
