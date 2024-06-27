@@ -353,11 +353,9 @@ MongoServersMode server_mode;
 bool read_slave_preferred;
 private:
     static std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> channels;
-    static thread_local std::unordered_map<std::string, brpc::Channel*> tls_channels;
     static brpc::Channel* GetChannel(const std::string& mongo_uri);
 
     static std::unordered_map<std::string, MongoServersMode> server_modes;
-    static thread_local std::unordered_map<std::string, MongoServersMode> tls_server_modes;
     static MongoServersMode GetMongoServersMode(const std::string& mongo_uri);
 };
 

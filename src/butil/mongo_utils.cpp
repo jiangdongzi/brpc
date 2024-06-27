@@ -551,15 +551,10 @@ bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
 }
 
 brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
-    auto it = tls_channels.find(mongo_uri);
-    if (it != tls_channels.end()) {
-        return it->second;
-    }
     static std::mutex mtx;
     std::lock_guard<std::mutex> lock_gurad(mtx);
     if (channels.find(mongo_uri) != channels.end()) {
-        tls_channels[mongo_uri] = channels[mongo_uri].get();
-        return tls_channels[mongo_uri];
+        return channels[mongo_uri].get();
     }
     std::unique_ptr<brpc::Channel> channel_up(new brpc::Channel);
     brpc::ChannelOptions options;
@@ -572,20 +567,15 @@ brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
         LOG(ERROR) << "Fail to initialize channel";
         throw std::runtime_error("Fail to initialize channel");
     }
+    delete options.auth;
     channels[mongo_uri].reset(channel_up.release());
-    tls_channels[mongo_uri] = channels[mongo_uri].get();
-    return tls_channels[mongo_uri];
+    return channels[mongo_uri].get();
 }
 
 MongoServersMode Client::GetMongoServersMode(const std::string& mongo_uri_str) {
-    auto it = tls_server_modes.find(mongo_uri_str);
-    if (it != tls_server_modes.end()) {
-        return it->second;
-    }
     static std::mutex mtx;
     std::lock_guard<std::mutex> lock_guard(mtx);
     if (server_modes.find(mongo_uri_str) != server_modes.end()) {
-        tls_server_modes[mongo_uri_str] = server_modes[mongo_uri_str];
         return server_modes[mongo_uri_str];
     }
     auto* channel = GetChannel(mongo_uri_str);
@@ -611,14 +601,12 @@ MongoServersMode Client::GetMongoServersMode(const std::string& mongo_uri_str) {
     LOG(INFO) << "view: " << bsoncxx::to_json(view);
     auto vit = view.find("setName");
     if (vit != view.end()) {
-        tls_server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
         server_modes[mongo_uri_str] = MongoServersMode::kReplicaSet;
         return MongoServersMode::kReplicaSet;
     }
     vit = view.find("msg");
     if (vit != view.end()) {
         if (vit->get_utf8().value.to_string() == "isdbgrid") {
-            tls_server_modes[mongo_uri_str] = MongoServersMode::kSharded;
             server_modes[mongo_uri_str] = MongoServersMode::kSharded;
             return MongoServersMode::kSharded;
         } else {
@@ -709,7 +697,6 @@ void Cursor::get_next_batch() {
     }
     response.mutable_sections()->swap(body);
     bsoncxx::document::view view = GetViewFromRawBody(body);
-    LOG(INFO) << "view: " << bsoncxx::to_json(view);
     bool ok = view["ok"].get_double() == 1.0;
     if (!ok) {
         hasMore = false;
@@ -744,10 +731,8 @@ Cursor::Iterator& Cursor::Iterator::operator++() {
 }
 
 std::unordered_map<std::string, std::unique_ptr<brpc::Channel>> Client::channels;
-thread_local std::unordered_map<std::string, brpc::Channel*> Client::tls_channels;
 
 std::unordered_map<std::string, MongoServersMode> Client::server_modes;
-thread_local std::unordered_map<std::string, MongoServersMode> Client::tls_server_modes;
 
 std::string BuildSections (const bsoncxx::builder::basic::document& doc) {
     std::string sections;
