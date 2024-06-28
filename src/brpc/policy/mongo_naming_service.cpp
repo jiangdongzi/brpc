@@ -69,8 +69,12 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
     brpc::Controller cntl;
 
     bsoncxx::builder::basic::document document{};
+    auto db = mongo_uri.database;
+    if (db.empty()) {
+        db = "admin";
+    }
     document.append(bsoncxx::builder::basic::kvp("isMaster", 1));
-    document.append(bsoncxx::builder::basic::kvp("$db", mongo_uri.database));
+    document.append(bsoncxx::builder::basic::kvp("$db", db));
 
     butil::mongo::AddDoc2Request(document, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
