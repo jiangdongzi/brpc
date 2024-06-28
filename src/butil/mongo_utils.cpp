@@ -1,6 +1,7 @@
 #include "mongo_utils.h"
 #include "brpc/policy/mongo.pb.h"
 #include "bsoncxx/builder/basic/document.hpp"
+#include "bthread/mutex.h"
 #include "butil/fast_rand.h"
 #include "brpc/channel.h"
 #include "butil/logging.h"
@@ -550,9 +551,15 @@ bsoncxx::document::view GetViewFromRawBody(const std::string& body) {
     return bsoncxx::document::view(data, doc_length);
 }
 
+static bthread_mutex_t brpc_mongo_mutex;
+std::once_flag flag;
+static void init_brpc_mongo_mutex() {
+    bthread_mutex_init(&brpc_mongo_mutex, nullptr);
+}
+
 brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
-    static std::mutex mtx;
-    std::lock_guard<std::mutex> lock_gurad(mtx);
+    std::call_once(flag, init_brpc_mongo_mutex);
+    std::lock_guard<bthread_mutex_t> lock_gurad(brpc_mongo_mutex);
     if (channels.find(mongo_uri) != channels.end()) {
         return channels[mongo_uri].get();
     }
