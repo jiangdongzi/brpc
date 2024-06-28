@@ -217,6 +217,7 @@ public:
     Collection* collection;
     uint64_t request_code;
     brpc::Channel* chan;
+    bsoncxx::builder::basic::document find_opt_doc;
 
     // 内部迭代器类
     class Iterator {
@@ -277,17 +278,16 @@ private:
 class Collection {
 public:
     std::string name;
+    std::unique_ptr<Database> database;
+
     Collection(const std::string& collection_name, Database* const db);
     Cursor find(bsoncxx::document::view_or_value filter, const options::find& opts = options::find());
     stdx::optional<bsoncxx::document::value> find_one(bsoncxx::document::view_or_value filter, options::find opts = options::find());
     // Database* database;
-    std::unique_ptr<Database> database;
-    bsoncxx::document::view_or_value filter;
     bsoncxx::document::value insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
     void async_insert_one(bsoncxx::document::view_or_value doc, const options::insert& opts = options::insert());
     bsoncxx::document::value update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts = options::update());
     void async_update_one(bsoncxx::document::view_or_value filter, bsoncxx::document::view_or_value update,  const options::update& opts = options::update());
-    bsoncxx::builder::basic::document find_opt_doc;
     stdx::optional<bsoncxx::document::value> find_one_and_update(bsoncxx::document::view_or_value query, bsoncxx::document::view_or_value update,  const options::find_one_and_update& opts = options::find_one_and_update());
 
     class BulkUpdate {

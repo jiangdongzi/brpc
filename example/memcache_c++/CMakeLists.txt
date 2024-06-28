@@ -135,4 +135,6 @@ endif()
 
 add_executable(memcache_client client.cpp)
 
+link_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx")
 target_link_libraries(memcache_client ${BRPC_LIB} ${DYNAMIC_LIB})
+target_link_libraries(memcache_client bsoncxx)

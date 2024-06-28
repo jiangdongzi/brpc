@@ -633,12 +633,12 @@ Cursor::Cursor(Collection* c) {
 }
 
 Cursor Collection::find(bsoncxx::document::view_or_value filter, const options::find& opts) {
-    this->filter = filter;
-    find_opt_doc.append(bsoncxx::builder::basic::kvp("find", name));
-    find_opt_doc.append(bsoncxx::builder::basic::kvp("filter", filter));
-    find_opt_doc.append(bsoncxx::builder::basic::kvp("$db", database->name));
+    Cursor c(this);
+    c.find_opt_doc.append(bsoncxx::builder::basic::kvp("find", name));
+    c.find_opt_doc.append(bsoncxx::builder::basic::kvp("filter", filter));
+    c.find_opt_doc.append(bsoncxx::builder::basic::kvp("$db", database->name));
     if (database->client->read_slave_preferred) {
-        find_opt_doc.append(
+        c.find_opt_doc.append(
             bsoncxx::builder::basic::kvp("$readPreference",
                 bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp("mode", "secondaryPreferred")
@@ -646,8 +646,8 @@ Cursor Collection::find(bsoncxx::document::view_or_value filter, const options::
             )
         );
     }
-    build_find_options_document(opts, &find_opt_doc);
-    return Cursor(this);
+    build_find_options_document(opts, &c.find_opt_doc);
+    return c;
 }
 
 void Cursor::get_first_batch() {
@@ -655,7 +655,7 @@ void Cursor::get_first_batch() {
     brpc::policy::MongoResponse response;
     brpc::Controller cntl;
 
-    AddDoc2Request(collection->find_opt_doc, &request);
+    AddDoc2Request(find_opt_doc, &request);
     request.mutable_header()->set_op_code(brpc::policy::OP_MSG);
     cntl.set_request_code(request_code);
     chan->CallMethod(NULL, &cntl, &request, &response, NULL);

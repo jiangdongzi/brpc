@@ -68,10 +68,13 @@ int main(int argc, char* argv[]) {
     butil::mongo::Client client(FLAGS_server);
     auto col = client["testdb"]["test"];
     bsoncxx::builder::basic::document doc;
-    butil::mongo::options::find opt{};
-    auto ret = col.find_one(doc.view());
-    if (ret) {
-        LOG(INFO) << bsoncxx::to_json(*ret);
+    auto v = col.find(doc.view());
+    for (auto&& doc : v) {
+        LOG(INFO) << bsoncxx::to_json(doc);
+    }
+    auto vi = col.find(doc.view());
+    for (auto&& doc : vi) {
+        LOG(INFO) << bsoncxx::to_json(doc);
     }
     using namespace bsoncxx::builder::basic;
     bsoncxx::builder::basic::document query{};
@@ -86,7 +89,7 @@ int main(int argc, char* argv[]) {
     butil::mongo::options::update opt_update{};
     // opt_update.upsert(true);
     butil::mongo::options::find_one_and_update opts;
-    ret = col.find_one_and_update(query.view(), update.view(), opts);
+    auto ret = col.find_one_and_update(query.view(), update.view(), opts);
     if (ret) {
         LOG(INFO) << bsoncxx::to_json(*ret);
     }
