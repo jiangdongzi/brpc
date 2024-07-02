@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <openssl/hmac.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -55,44 +56,49 @@ DEFINE_string(key, "hello", "The key to be get");
 DEFINE_string(value, "world", "The value associated with the key");
 DEFINE_int32(batch, 1, "Pipelined Operations");
 
-int main(int argc, char* argv[]) {
-    // Parse gflags. We recommend you to use gflags as well.
-    GFLAGS_NS::ParseCommandLineFlags(&argc, &argv, true);
-    if (FLAGS_exptime < 0) {
-        FLAGS_exptime = 0;
+static std::unique_ptr<butil::mongo::Client> GetClient() {
+    LOG(INFO) << "before: " << bthread_self();
+    std::unique_ptr<butil::mongo::Client> client(new butil::mongo::Client(FLAGS_server));
+    return client;
+}
+
+butil::mongo::Client* Client() {
+    static std::unique_ptr<butil::mongo::Client> client;
+    if (client == nullptr) {
+        client = GetClient();
     }
+    return client.get();
+}
 
-    // A Channel represents a communication line to a Server. Notice that 
-    // Channel is thread-safe and can be shared by all threads in your program.
-
-    butil::mongo::Client client(FLAGS_server);
-    auto col = client["testdb"]["test"];
+static void* ClientTest(void*) {
+    auto client = Client();
+    auto col = (*client)["testdb"]["test"];
     bsoncxx::builder::basic::document doc;
     auto v = col.find(doc.view());
     for (auto&& doc : v) {
         LOG(INFO) << bsoncxx::to_json(doc);
     }
-    auto vi = col.find(doc.view());
-    for (auto&& doc : vi) {
-        LOG(INFO) << bsoncxx::to_json(doc);
-    }
-    using namespace bsoncxx::builder::basic;
-    bsoncxx::builder::basic::document query{};
-    query.append(bsoncxx::builder::basic::kvp("name", "lice"));
+    return nullptr;
+}
 
-    // 构建更新操作
-    bsoncxx::builder::basic::document update{};
-    update.append(bsoncxx::builder::basic::kvp("$set", 
-                bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("age", 57)
-                )));
-    butil::mongo::options::update opt_update{};
-    // opt_update.upsert(true);
-    butil::mongo::options::find_one_and_update opts;
-    auto ret = col.find_one_and_update(query.view(), update.view(), opts);
-    if (ret) {
-        LOG(INFO) << bsoncxx::to_json(*ret);
+int main(int argc, char* argv[]) {
+    LOG(INFO) << "main...";
+    // Parse gflags. We recommend you to use gflags as well.
+    GFLAGS_NS::ParseCommandLineFlags(&argc, &argv, true);
+    if (FLAGS_exptime < 0) {
+        FLAGS_exptime = 0;
     }
-    bthread_usleep(1000 * 1000 * 10);
+    std::vector<bthread_t> tids;
+    for (int i = 0; i < 32; i++) {
+        bthread_t tid;
+        if (bthread_start_background(&tid, nullptr, ClientTest, nullptr) != 0) {
+            LOG(ERROR) << "Fail to start thread " << i;
+            return -1;
+        }
+        tids.push_back(tid);
+    }
+    for (size_t i = 0; i < tids.size(); i++) {
+        bthread_join(tids[i], nullptr);
+    }
     return 0;
 }
