@@ -408,6 +408,7 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/binary_printer.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/recordio.cc
     ${PROJECT_SOURCE_DIR}/src/butil/popen.cpp
+    ${PROJECT_SOURCE_DIR}/src/butil/mongo_utils.cpp
     )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
