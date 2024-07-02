@@ -83,7 +83,7 @@ static std::string GetIsMasterMsg (const std::string mongo_uri_str, const std::s
         LOG(ERROR) << "Fail to access mongodb, " << cntl.ErrorText();
         return "";
     }
-    LOG(INFO) << "response_flags: " << response.flag_bits();
+    // LOG(INFO) << "response_flags: " << response.flag_bits();
     return response.sections();
 }
 
@@ -139,8 +139,8 @@ std::vector<std::string> ResolveHostsToIPPort(const std::vector<std::string>& ho
 int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *servers) {
     servers->clear();
     butil::MongoDBUri mongo_uri = butil::parse_mongo_uri(uri);
-    LOG(INFO) << "Mongo URI: " << uri;
-    LOG(INFO) << mongo_uri.hosts[0];
+    // LOG(INFO) << "Mongo URI: " << uri;
+    // LOG(INFO) << mongo_uri.hosts[0];
     std::vector<std::string> hosts = ResolveHostsToIPPort(mongo_uri.hosts);
     std::unordered_set<std::string> visited_hosts;
     while (!hosts.empty()) {
@@ -156,7 +156,7 @@ int MongoNamingService::GetServers(const char *uri, std::vector<ServerNode> *ser
         }
         // 创建 BSON 视图
         bsoncxx::document::view view = butil::mongo::GetViewFromRawBody(is_master_msg);
-        LOG(INFO) << bsoncxx::to_json(view);
+        // LOG(INFO) << bsoncxx::to_json(view);
         //校验replicaSet
         if (view.find("setName") != view.end()) {
             auto it = mongo_uri.options.find("replicaSet");

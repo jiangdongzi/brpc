@@ -178,7 +178,7 @@ int MongoAuthenticator::AuthSCRAMSHA1(Controller* raw_cntl) const{
 
     first_payload_str = GetPayload(response.sections());
     sscanf(first_payload_str.c_str(), "r=%[^,],s=%[^,],i=%d", r, s, &i);
-    LOG(INFO) << "r: " << r << ", s: " << s << ", i: " << i;
+    // LOG(INFO) << "r: " << r << ", s: " << s << ", i: " << i;
     conv_id = GetConversationId(response.sections());
 
     //second step
@@ -250,7 +250,7 @@ int MongoAuthenticator::AuthSCRAMSHA1(Controller* raw_cntl) const{
     Join(cid);
 
     const std::string second_payload_str = GetPayload(response.sections());
-    LOG(INFO) << "second_payload_str: " << second_payload_str;
+    // LOG(INFO) << "second_payload_str: " << second_payload_str;
 
     //verify server signature
     const std::string server_key_str = HMAC_SHA1(salted_password_str, MONGOC_SCRAM_SERVER_KEY);
@@ -263,7 +263,7 @@ int MongoAuthenticator::AuthSCRAMSHA1(Controller* raw_cntl) const{
         LOG(ERROR) << "server signature verification failed";
         return -1;
     } else {
-        LOG(INFO) << "server signature verification success";
+        // LOG(INFO) << "server signature verification success";
     }
 
     //last step
