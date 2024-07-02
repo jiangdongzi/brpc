@@ -557,6 +557,12 @@ static void init_brpc_mongo_mutex() {
     bthread_mutex_init(&brpc_mongo_mutex, nullptr);
 }
 
+static bthread_mutex_t brpc_mongo_mutex1;
+std::once_flag flag1;
+static void init_brpc_mongo_mutex1() {
+    bthread_mutex_init(&brpc_mongo_mutex1, nullptr);
+}
+
 brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
     std::call_once(flag, init_brpc_mongo_mutex);
     std::lock_guard<bthread_mutex_t> lock_gurad(brpc_mongo_mutex);
@@ -579,8 +585,8 @@ brpc::Channel* Client::GetChannel(const std::string& mongo_uri) {
 }
 
 MongoServersMode Client::GetMongoServersMode(const std::string& mongo_uri_str) {
-    static std::mutex mtx;
-    std::lock_guard<std::mutex> lock_guard(mtx);
+    std::call_once(flag1, init_brpc_mongo_mutex);
+    std::lock_guard<bthread_mutex_t> lock_gurad(brpc_mongo_mutex1);
     if (server_modes.find(mongo_uri_str) != server_modes.end()) {
         return server_modes[mongo_uri_str];
     }
