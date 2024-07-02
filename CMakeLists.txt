@@ -15,11 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 2.8.10)
 project(brpc C CXX)
 
 option(WITH_GLOG "With glog" OFF)
 option(WITH_MESALINK "With MesaLink" OFF)
+option(WITH_BORINGSSL "With BoringSSL" OFF)
 option(DEBUG "Print debug logs" OFF)
 option(WITH_DEBUG_SYMBOLS "With debug symbols" ON)
 option(WITH_THRIFT "With thrift framed protocol supported" OFF)
@@ -35,7 +36,7 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif()
 
-set(BRPC_VERSION 1.8.0)
+set(BRPC_VERSION 1.6.0)
 
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "brpc authors")
@@ -67,7 +68,10 @@ endif()
 
 if(WITH_THRIFT)
     set(THRIFT_CPP_FLAG "-DENABLE_THRIFT_FRAMED_PROTOCOL")
-    set(THRIFT_LIB "thrift")
+    find_library(THRIFT_LIB NAMES thrift)
+    if (NOT THRIFT_LIB)
+        message(FATAL_ERROR "Fail to find Thrift")
+    endif()
 endif()
 
 set(WITH_RDMA_VAL "0")
@@ -98,8 +102,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
 )
-include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
-include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include")
 
 execute_process(
     COMMAND bash -c "${PROJECT_SOURCE_DIR}/tools/get_brpc_revision.sh ${PROJECT_SOURCE_DIR} | tr -d '\n'"
@@ -138,6 +140,8 @@ else()
 endif()
 endmacro(use_cxx11)
 
+use_cxx11()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #required by butil/crc32.cc to boost performance for 10x
     if((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)") AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.4))
@@ -152,50 +156,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 find_package(Protobuf REQUIRED)
-if(Protobuf_VERSION GREATER 4.21)
-    # required by absl
-    set(CMAKE_CXX_STANDARD 17)
-
-    find_package(absl REQUIRED CONFIG)
-    set(protobuf_ABSL_USED_TARGETS
-        absl::absl_check
-        absl::absl_log
-        absl::algorithm
-        absl::base
-        absl::bind_front
-        absl::bits
-        absl::btree
-        absl::cleanup
-        absl::cord
-        absl::core_headers
-        absl::debugging
-        absl::die_if_null
-        absl::dynamic_annotations
-        absl::flags
-        absl::flat_hash_map
-        absl::flat_hash_set
-        absl::function_ref
-        absl::hash
-        absl::layout
-        absl::log_initialize
-        absl::log_severity
-        absl::memory
-        absl::node_hash_map
-        absl::node_hash_set
-        absl::optional
-        absl::span
-        absl::status
-        absl::statusor
-        absl::strings
-        absl::synchronization
-        absl::time
-        absl::type_traits
-        absl::utility
-        absl::variant
-    )
-else()
-    use_cxx11()
-endif()
 find_package(Threads REQUIRED)
 
 find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
@@ -233,9 +193,6 @@ if(WITH_MESALINK)
     include_directories(${MESALINK_INCLUDE_PATH})
 endif()
 
-include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
-include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include/")
-
 if(WITH_RDMA)
     message("brpc compile with rdma")
     find_path(RDMA_INCLUDE_PATH NAMES infiniband/verbs.h)
@@ -250,51 +207,46 @@ if(NOT PROTOC_LIB)
     message(FATAL_ERROR "Fail to find protoc lib")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(OPENSSL_ROOT_DIR
-        "/usr/local/opt/openssl"    # Homebrew installed OpenSSL
+if(WITH_BORINGSSL)
+    find_package(BoringSSL)
+    include_directories(${BORINGSSL_INCLUDE_DIR})
+else()
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        set(OPENSSL_ROOT_DIR
+            "/usr/local/opt/openssl" # Homebrew installed OpenSSL
         )
+    endif()
+
+    find_package(OpenSSL)
+    include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
-
-find_package(OpenSSL)
-
-set(LEVELDB_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
-set(LEVELDB_LIB "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libleveldb.a")
-
-set(GFLAGS_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/buildtrees/gflags/x64-linux-rel/include")
-set(GFLAGS_LIBRARY "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libgflags.a")
-
-
-set(PROTOBUF_INCLUDE_DIRS "/home/dev/zhiyuan/new_mico/mico-party-new/mexternal/include")
-set(PROTOBUF_LIBRARIES "/data/zhiyuan/new_mico/mico-party-new/mexternal/lib/libprotobuf.a")
-set(OPENSSL_CRYPTO_LIBRARY "/data/zhiyuan/github/vcpkg/packages/openssl-unix_x64-linux/lib/libcrypto.a")
-
 
 include_directories(
         ${GFLAGS_INCLUDE_PATH}
         ${PROTOBUF_INCLUDE_DIRS}
         ${LEVELDB_INCLUDE_PATH}
-        ${OPENSSL_INCLUDE_DIR}
         )
 
 set(DYNAMIC_LIB
     ${GFLAGS_LIBRARY}
-    ${PROTOBUF_LIBRARIES} ${protobuf_ABSL_USED_TARGETS}
+    ${PROTOBUF_LIBRARIES}
     ${LEVELDB_LIB}
     ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${THRIFT_LIB}
-    ${THRIFTNB_LIB}
-    ${OPENSSL_CRYPTO_LIBRARY}
     dl
     z)
 
-message("ivyjxj.. " ${OPENSSL_CRYPTO_LIBRARY})
-
-if(WITH_MESALINK)
-    list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
+if(WITH_BORINGSSL)
+    list(APPEND DYNAMIC_LIB ${BORINGSSL_SSL_LIBRARY})
+    list(APPEND DYNAMIC_LIB ${BORINGSSL_CRYPTO_LIBRARY})
 else()
-    list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
+    list(APPEND DYNAMIC_LIB ${OPENSSL_CRYPTO_LIBRARY})
+    if(WITH_MESALINK)
+        list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
+    else()
+        list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
+    endif()
 endif()
 
 if(WITH_RDMA)
@@ -327,7 +279,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         "-framework Foundation"
         "-Wl,-U,_MallocExtension_ReleaseFreeMemory"
         "-Wl,-U,_ProfilerStart"
-        "-Wl,-U,_ProfilerStop")
+        "-Wl,-U,_ProfilerStop"
+        "-Wl,-U,__Z13GetStackTracePPvii")
 endif()
 
 # for *.so
@@ -354,6 +307,7 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/at_exit.cc
     ${PROJECT_SOURCE_DIR}/src/butil/atomicops_internals_x86_gcc.cc
     ${PROJECT_SOURCE_DIR}/src/butil/base64.cc
+    ${PROJECT_SOURCE_DIR}/src/butil/base64url.cc
     ${PROJECT_SOURCE_DIR}/src/butil/big_endian.cc
     ${PROJECT_SOURCE_DIR}/src/butil/cpu.cc
     ${PROJECT_SOURCE_DIR}/src/butil/debug/alias.cc
@@ -437,6 +391,7 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/status.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/string_printf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/thread_local.cpp
+    ${PROJECT_SOURCE_DIR}/src/butil/thread_key.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/unix_socket.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/endpoint.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/fd_utility.cpp
@@ -445,13 +400,11 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/time.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/zero_copy_stream_as_streambuf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/crc32c.cc
-    ${PROJECT_SOURCE_DIR}/src/butil/redis_cluster_slot.cc
     ${PROJECT_SOURCE_DIR}/src/butil/containers/case_ignored_flat_map.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/iobuf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/binary_printer.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/recordio.cc
     ${PROJECT_SOURCE_DIR}/src/butil/popen.cpp
-    ${PROJECT_SOURCE_DIR}/src/butil/mongo_utils.cpp
     )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -520,12 +473,10 @@ set(PROTO_FILES idl_options.proto
                 brpc/proto_base.proto)
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/output/include/brpc)
 set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
-message("ivyjxj123" ${PROTOBUF_PROTOC_EXECUTABLE})
 compile_proto(PROTO_HDRS PROTO_SRCS ${PROJECT_BINARY_DIR}
                                     ${PROJECT_BINARY_DIR}/output/include
                                     ${PROJECT_SOURCE_DIR}/src
                                     "${PROTO_FILES}")
-
 add_library(PROTO_LIB OBJECT ${PROTO_SRCS} ${PROTO_HDRS})
 
 set(SOURCES
