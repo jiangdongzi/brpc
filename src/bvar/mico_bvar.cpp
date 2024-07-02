@@ -9,8 +9,8 @@ std::string brpc_get_app_name();
 bthread_t bvar_stat_tid;
 struct JoinBvarStat_tid {
   ~JoinBvarStat_tid() {
-    bthread_stop(bvar_stat_tid);
-    bthread_join(bvar_stat_tid, nullptr);
+    // bthread_stop(bvar_stat_tid);
+    // bthread_join(bvar_stat_tid, nullptr);
   }
 };
 
@@ -41,18 +41,18 @@ public:
 };
 
 static brpc::Channel& GetPrometheusChannel (const std::string& pushgateway_server) {
-  static brpc::Channel channel;
-  static JoinBvarStat_tid _;
+  static brpc::Channel *channel = new brpc::Channel;
+  // static JoinBvarStat_tid _;
   brpc::ChannelOptions options;
   options.protocol = "h2:grpc";
   options.max_retry = 3;
   options.timeout_ms = 1000;
-  const auto rc = channel.Init(pushgateway_server.c_str(), "", &options);
+  const auto rc = channel->Init(pushgateway_server.c_str(), "", &options);
   if (rc != 0) {
     LOG(ERROR) << "GetPrometheusChannel: init channel failed, error_code: " << rc;
     std::abort();
   }
-  return channel;
+  return *channel;
 }
 
 static void* dump_bvar(void* arg) {
