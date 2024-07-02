@@ -615,6 +615,7 @@ MongoServersMode Client::GetMongoServersMode(const std::string& mongo_uri_str) {
             throw std::runtime_error("Unsupported server mode");
         }
     }
+    server_modes[mongo_uri_str] = MongoServersMode::kSingle;
     return MongoServersMode::kSingle;
 }
 
