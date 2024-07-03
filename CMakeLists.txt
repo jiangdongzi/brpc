@@ -20,7 +20,6 @@ project(brpc C CXX)
 
 option(WITH_GLOG "With glog" OFF)
 option(WITH_MESALINK "With MesaLink" OFF)
-option(WITH_BORINGSSL "With BoringSSL" OFF)
 option(DEBUG "Print debug logs" OFF)
 option(WITH_DEBUG_SYMBOLS "With debug symbols" ON)
 option(WITH_THRIFT "With thrift framed protocol supported" OFF)
@@ -68,10 +67,7 @@ endif()
 
 if(WITH_THRIFT)
     set(THRIFT_CPP_FLAG "-DENABLE_THRIFT_FRAMED_PROTOCOL")
-    find_library(THRIFT_LIB NAMES thrift)
-    if (NOT THRIFT_LIB)
-        message(FATAL_ERROR "Fail to find Thrift")
-    endif()
+    set(THRIFT_LIB "thrift")
 endif()
 
 set(WITH_RDMA_VAL "0")
@@ -102,6 +98,8 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
 )
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include")
 
 execute_process(
     COMMAND bash -c "${PROJECT_SOURCE_DIR}/tools/get_brpc_revision.sh ${PROJECT_SOURCE_DIR} | tr -d '\n'"
@@ -235,6 +233,9 @@ if(WITH_MESALINK)
     include_directories(${MESALINK_INCLUDE_PATH})
 endif()
 
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
+include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include/")
+
 if(WITH_RDMA)
     message("brpc compile with rdma")
     find_path(RDMA_INCLUDE_PATH NAMES infiniband/verbs.h)
@@ -249,24 +250,31 @@ if(NOT PROTOC_LIB)
     message(FATAL_ERROR "Fail to find protoc lib")
 endif()
 
-if(WITH_BORINGSSL)
-    find_package(BoringSSL)
-    include_directories(${BORINGSSL_INCLUDE_DIR})
-else()
-    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-        set(OPENSSL_ROOT_DIR
-            "/usr/local/opt/openssl" # Homebrew installed OpenSSL
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(OPENSSL_ROOT_DIR
+        "/usr/local/opt/openssl"    # Homebrew installed OpenSSL
         )
-    endif()
-
-    find_package(OpenSSL)
-    include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
+
+find_package(OpenSSL)
+
+set(LEVELDB_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
+set(LEVELDB_LIB "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libleveldb.a")
+
+set(GFLAGS_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/buildtrees/gflags/x64-linux-rel/include")
+set(GFLAGS_LIBRARY "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libgflags.a")
+
+
+set(PROTOBUF_INCLUDE_DIRS "/home/dev/zhiyuan/new_mico/mico-party-new/mexternal/include")
+set(PROTOBUF_LIBRARIES "/data/zhiyuan/new_mico/mico-party-new/mexternal/lib/libprotobuf.a")
+set(OPENSSL_CRYPTO_LIBRARY "/data/zhiyuan/github/vcpkg/packages/openssl-unix_x64-linux/lib/libcrypto.a")
+
 
 include_directories(
         ${GFLAGS_INCLUDE_PATH}
         ${PROTOBUF_INCLUDE_DIRS}
         ${LEVELDB_INCLUDE_PATH}
+        ${OPENSSL_INCLUDE_DIR}
         )
 
 set(DYNAMIC_LIB
@@ -276,19 +284,17 @@ set(DYNAMIC_LIB
     ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${THRIFT_LIB}
+    ${THRIFTNB_LIB}
+    ${OPENSSL_CRYPTO_LIBRARY}
     dl
     z)
 
-if(WITH_BORINGSSL)
-    list(APPEND DYNAMIC_LIB ${BORINGSSL_SSL_LIBRARY})
-    list(APPEND DYNAMIC_LIB ${BORINGSSL_CRYPTO_LIBRARY})
+message("ivyjxj.. " ${OPENSSL_CRYPTO_LIBRARY})
+
+if(WITH_MESALINK)
+    list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
 else()
-    list(APPEND DYNAMIC_LIB ${OPENSSL_CRYPTO_LIBRARY})
-    if(WITH_MESALINK)
-        list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
-    else()
-        list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
-    endif()
+    list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
 endif()
 
 if(WITH_RDMA)
@@ -321,8 +327,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         "-framework Foundation"
         "-Wl,-U,_MallocExtension_ReleaseFreeMemory"
         "-Wl,-U,_ProfilerStart"
-        "-Wl,-U,_ProfilerStop"
-        "-Wl,-U,__Z13GetStackTracePPvii")
+        "-Wl,-U,_ProfilerStop")
 endif()
 
 # for *.so
@@ -349,7 +354,6 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/at_exit.cc
     ${PROJECT_SOURCE_DIR}/src/butil/atomicops_internals_x86_gcc.cc
     ${PROJECT_SOURCE_DIR}/src/butil/base64.cc
-    ${PROJECT_SOURCE_DIR}/src/butil/base64url.cc
     ${PROJECT_SOURCE_DIR}/src/butil/big_endian.cc
     ${PROJECT_SOURCE_DIR}/src/butil/cpu.cc
     ${PROJECT_SOURCE_DIR}/src/butil/debug/alias.cc
@@ -433,7 +437,6 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/status.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/string_printf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/thread_local.cpp
-    ${PROJECT_SOURCE_DIR}/src/butil/thread_key.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/unix_socket.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/endpoint.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/fd_utility.cpp
@@ -514,10 +517,12 @@ set(PROTO_FILES idl_options.proto
                 brpc/proto_base.proto)
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/output/include/brpc)
 set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
+message("ivyjxj123" ${PROTOBUF_PROTOC_EXECUTABLE})
 compile_proto(PROTO_HDRS PROTO_SRCS ${PROJECT_BINARY_DIR}
                                     ${PROJECT_BINARY_DIR}/output/include
                                     ${PROJECT_SOURCE_DIR}/src
                                     "${PROTO_FILES}")
+
 add_library(PROTO_LIB OBJECT ${PROTO_SRCS} ${PROTO_HDRS})
 
 set(SOURCES
