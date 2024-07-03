@@ -1851,10 +1851,7 @@ void PackH2Request(butil::IOBuf*,
 
 static bool IsH2SocketValid(Socket* s, Socket* raw_socket) {
     //LOG(INFO) << "id" << s->id() << ", last_sent_stream_id=" << s->last_sent_stream_id.load(butil::memory_order_relaxed) << ", raw_id: " << raw_socket->id() << ", possible_h2_max_stream_id=" << raw_socket->possible_h2_max_stream_id;
-    if (s->LogOff()) {
-        return false;
-    }
-    return s->last_sent_stream_id.fetch_add(2, butil::memory_order_relaxed) < raw_socket->possible_h2_max_stream_id;
+   return !s->LogOff();
 }
 
 StreamUserData* H2GlobalStreamCreator::OnCreatingStream(

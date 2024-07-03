@@ -411,7 +411,7 @@ inline int H2Context::AllocateClientStreamId() {
 }
 
 inline bool H2Context::RunOutStreams() const {
-    return (_last_sent_stream_id > possible_goaway_stream_id);
+    return (_last_sent_stream_id > 0xffffffff);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const H2UnsentRequest& req) {
