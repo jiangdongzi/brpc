@@ -2845,7 +2845,7 @@ int Socket::GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*, Socket
                 out->swap(tmp_sock);
                 return 0;
             }
-            // tmp_sock->ReleaseAdditionalReference();
+            tmp_sock->ReleaseAdditionalReference();
         }
         do {
             if (GetShortSocket(&tmp_sock) != 0) {
