@@ -407,6 +407,7 @@ inline int H2Context::AllocateClientStreamId() {
     }
     const int id = _last_sent_stream_id;
     //打印socket id, stream id
+    if (id > 199)
     LOG(INFO) << "AllocateClientStreamId, socket_id=" << _socket->id()
               << ", stream_id=" << id;
     _last_sent_stream_id += 2;
