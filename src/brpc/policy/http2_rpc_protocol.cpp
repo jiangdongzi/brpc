@@ -408,6 +408,8 @@ void H2Context::RemoveGoAwayStreams(
         for (StreamMap::const_iterator it = _pending_streams.begin();
              it != _pending_streams.end(); ++it) {
             if (it->first > goaway_stream_id) {
+                //打印socketid, streamid
+                LOG(INFO) << "RemoveGoAwayStreams: " << _socket->id() << " " << it->first;
                 out_streams->push_back(it->second);
             }
         }
