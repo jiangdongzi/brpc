@@ -2847,12 +2847,17 @@ int Socket::GetAgentSocket(SocketUniquePtr* out, bool (*checkfn)(Socket*, Socket
             }
             tmp_sock->ReleaseAdditionalReference();
         }
+        if (tmp_sock != nullptr) {
+            LOG(INFO) << "prev GetAgentSocket: " << tmp_sock->id();
+        }
         do {
             if (GetShortSocket(&tmp_sock) != 0) {
                 LOG(ERROR) << "Fail to get short socket from " << *this;
                 return -1;
             }
             if (checkfn == NULL || checkfn(tmp_sock.get(), this)) {
+                //打印socketid
+                LOG(INFO) << "GetAgentSocket: " << tmp_sock->id();
                 break;
             }
             tmp_sock->ReleaseAdditionalReference();
