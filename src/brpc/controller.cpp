@@ -602,6 +602,10 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
         return;
     }
 
+    if (_error_code != 0) {
+        LOG(ERROR) << "RPC failed: " << _error_text << " code: " << _error_code;
+    }
+
     if ((_error_code == EGOAWAY || _error_code == EMOVED) && _current_call.fake_error_try++ < 3) {
         _current_call.OnComplete(this, _error_code, info.responded, false);
         return IssueRPC(butil::gettimeofday_us());
