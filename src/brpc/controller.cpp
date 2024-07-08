@@ -606,7 +606,7 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
         LOG(INFO) << "id=" << info.id << " fake_error_try=" << _current_call.fake_error_try << " socket_id: " << _current_call.sending_sock->id() << " error_code: " << _error_code << " error_text: " << _error_text;
     }
 
-    if ((_error_code == EGOAWAY) && _current_call.fake_error_try++ < 3) {
+    if ((_error_code == EGOAWAY || _error_code == EMOVED) && _current_call.fake_error_try++ < 3) {
         _current_call.OnComplete(this, _error_code, info.responded, false);
         return IssueRPC(butil::gettimeofday_us());
     }
