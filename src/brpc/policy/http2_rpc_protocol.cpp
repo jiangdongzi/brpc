@@ -1563,7 +1563,7 @@ H2UnsentRequest::AppendAndDestroySelf(butil::IOBuf* out, Socket* socket) {
     if (rc < 0) {
         return butil::Status(EINTERNAL, "Fail to insert existing stream_id");
     } else if (rc > 0) {
-        return butil::Status(ELOGOFF, "the connection just issued GOAWAY");
+        return butil::Status(EGOAWAY, "the connection just issued GOAWAY");
     }
     _stream_id = _sctx->stream_id();
     // After calling TryToInsertStream, the ownership of _sctx is transferred to ctx
