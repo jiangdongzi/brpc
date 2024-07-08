@@ -1064,6 +1064,15 @@ void Socket::NotifyOnFailed(bthread_id_t id) {
     }
 }
 
+void Socket::CancelNotify(bthread_id_t id) {
+    pthread_mutex_lock(&_id_wait_list_mutex);
+    const int rc = bthread_id_list_remove(&_id_wait_list, id);
+    pthread_mutex_unlock(&_id_wait_list_mutex);
+    if (rc != 0) {
+        bthread_id_error(id, rc);
+    }
+}
+
 // For unit-test.
 int Socket::Status(SocketId id, int32_t* nref) {
     const butil::ResourceId<Socket> slot = SlotOfSocketId(id);

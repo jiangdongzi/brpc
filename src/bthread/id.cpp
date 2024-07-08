@@ -666,6 +666,13 @@ int bthread_id_list_add(bthread_id_list_t* list, bthread_id_t id) {
     return static_cast<bthread::IdList*>(list->impl)->add(id);
 }
 
+int bthread_id_list_remove(bthread_id_list_t* list, bthread_id_t id) {
+    if (list->impl == NULL) {
+        return 0;
+    }
+   return static_cast<bthread::IdList*>(list->impl)->remove(id);
+}
+
 int bthread_id_list_reset(bthread_id_list_t* list, int error_code) {
     return bthread_id_list_reset2(list, error_code, std::string());
 }

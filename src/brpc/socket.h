@@ -426,6 +426,8 @@ public:
     // before so that `Socket' will be recycled automatically once
     // on one is addressing it.
     int ReleaseAdditionalReference();
+    void CancelNotify(bthread_id_t id);
+
     // `ReleaseAdditionalReference' this Socket iff it has no data
     // transmission during the last `idle_seconds'
     int ReleaseReferenceIfIdle(int idle_seconds);

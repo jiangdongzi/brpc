@@ -21,6 +21,7 @@
 #include "brpc/http_status_code.h"
 #include "brpc/server.h"
 #include "brpc/socket.h"
+#include "bthread/types.h"
 #include "butil/base64.h"
 #include "brpc/log.h"
 
@@ -411,6 +412,7 @@ void H2Context::RemoveGoAwayStreams(
                 //打印socketid, streamid
                 LOG(INFO) << "RemoveGoAwayStreams: " << _socket->id() << " " << it->first;
                 out_streams->push_back(it->second);
+                _socket->CancelNotify(bthread_id_t{it->second->correlation_id()});
             }
         }
         for (size_t i = 0; i < out_streams->size(); ++i) {

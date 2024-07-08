@@ -76,6 +76,7 @@ public:
     // Apply fn(id) to all identifiers.
     template <typename Fn>
     void apply(const Fn& fn);
+    int remove(Id id);
 
     // Put #entries of each level into `counts'
     // Returns #levels.
@@ -324,6 +325,19 @@ void ListOfABAFreeId<Id, IdTraits>::apply(const Fn& fn) {
             }
         }
     }
+}
+
+template <typename Id, typename IdTraits>
+int ListOfABAFreeId<Id, IdTraits>::remove(Id id) {
+    for (IdBlock* p = &_head_block; p != NULL; p = p->next) {
+        for (size_t i = 0; i < IdTraits::BLOCK_SIZE; ++i) {
+            if (p->ids[i] == id) {
+                p->ids[i] = IdTraits::ID_INIT;
+                return 0;
+            }
+        }
+    }
+    return 0;
 }
 
 template <typename Id, typename IdTraits>

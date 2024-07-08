@@ -137,6 +137,8 @@ void bthread_id_list_destroy(bthread_id_list_t* list);
 // Add a bthread_id_t into the list.
 int bthread_id_list_add(bthread_id_list_t* list, bthread_id_t id);
 
+int bthread_id_list_remove(bthread_id_list_t* list, bthread_id_t id);
+
 // Swap internal fields of two lists.
 void bthread_id_list_swap(bthread_id_list_t* dest, 
                           bthread_id_list_t* src);
