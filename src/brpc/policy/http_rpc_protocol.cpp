@@ -360,10 +360,7 @@ void ProcessHttpResponse(InputMessageBase* msg) {
 
         int sc = res_header->status_code();
         if (sc == HTTP_STATUS_SERVICE_GOAWAY) {
-            LOG(INFO) << "msg: " << (void*)msg << " correlation_id: " << cid_value;
-            LOG(INFO) << "socket: " << (void*)socket;
-            LOG(INFO) << "id: " << socket->id();
-            cntl->SetFailed(EGOAWAY, "Server is going away, socket_id: %lu", socket->id());
+            cntl->SetFailed(EGOAWAY);
             break;
         }
 

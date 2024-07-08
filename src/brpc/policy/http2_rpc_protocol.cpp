@@ -409,8 +409,6 @@ void H2Context::RemoveGoAwayStreams(
         for (StreamMap::const_iterator it = _pending_streams.begin();
              it != _pending_streams.end(); ++it) {
             if (it->first > goaway_stream_id) {
-                //打印socketid, streamid
-                LOG(INFO) << "RemoveGoAwayStreams: " << _socket->id() << " " << it->first << " socket: " << (void*)static_cast<HttpContext*>((it->second))->socket() << " msg: " << (void*)it->second << " co_id: " << it->second->correlation_id();
                 out_streams->push_back(it->second);
                 _socket->CancelNotify(bthread_id_t{it->second->correlation_id()});
             }
@@ -428,18 +426,6 @@ H2StreamContext* H2Context::FindStream(int stream_id) {
         return *psctx;
     }
     return NULL;
-}
-
-void SetPossibleGoAwayStreamId (const int stream_id, const SocketId socket_id) {
-    if (stream_id < 50) {
-        return;
-    }
-    SocketUniquePtr tmp_sock;
-    int rc = Socket::Address(socket_id, &tmp_sock);
-    if (rc != 0) {
-        return;
-    }
-    tmp_sock->possible_h2_max_stream_id = stream_id;
 }
 
 int H2Context::TryToInsertStream(int stream_id, H2StreamContext* ctx) {
@@ -997,10 +983,8 @@ H2ParseResult H2Context::OnGoAway(
         LOG(INFO) << "id: " << _socket->id() << " received GOAWAY, last_stream_id: " << last_stream_id;
         _socket->SetLogOff();
 
-        SetPossibleGoAwayStreamId(last_stream_id, raw_socket_id);
-
         std::vector<H2StreamContext*> goaway_streams;
-        LOG(INFO) << "GOAWAY received, last_stream_id = " << last_stream_id << ", last_sent_stream_id: " << _last_sent_stream_id;
+        LOG(INFO) << "GOAWAY received, last_stream_id = " << last_stream_id << ", _last_sent_stream_id: " << _last_sent_stream_id;
         RemoveGoAwayStreams(last_stream_id, &goaway_streams);
         if (goaway_streams.empty()) {
             return MakeH2Message(NULL);
@@ -1064,7 +1048,7 @@ void H2Context::Describe(std::ostream& os, const DescribeOptions& opt) const {
     const char sep = (opt.verbose ? '\n' : ' ');
     os << "conn_state=" << H2ConnectionState2Str(_conn_state);
     os << sep << "last_received_stream_id=" << _last_received_stream_id
-       << sep << "last_sent_stream_id=" << _last_sent_stream_id;
+       << sep << "_last_sent_stream_id=" << _last_sent_stream_id;
     os << sep << "deferred_window_update="
        << _deferred_window_update.load(butil::memory_order_relaxed)
        << sep << "remote_conn_window_left="
@@ -1513,26 +1497,6 @@ bvar::PerSecond<bvar::Adder<int64_t> > g_append_request_time_per_second(
     "h2_append_request_second",     &g_append_request_time);
 #endif
 
-int GetPossibleStreamId(const Controller* cntl, butil::Mutex &_stream_mutex) {
-    if (cntl == nullptr) {
-        return 0x7FFFFFFF;
-    }
-    std::unique_lock<butil::Mutex> mu(_stream_mutex);
-    SocketUniquePtr tmp_sock;
-    int rc = Socket::Address(cntl->current_call().peer_id, &tmp_sock);
-    if (rc != 0) {
-        return 0x7FFFFFFF;
-    }
-    if (tmp_sock->possible_h2_max_stream_id < 50) {
-        return 0x7FFFFFFF;
-    }
-    if (butil::fast_rand_less_than(3000) == 1) {
-        tmp_sock->possible_h2_max_stream_id = 0x7FFFFFFF;
-    }
-    LOG(INFO) << "possible_h2_max_stream_id=" << tmp_sock->possible_h2_max_stream_id << ", remote_side: " << cntl->remote_side();
-    return tmp_sock->possible_h2_max_stream_id; 
-}
-
 butil::Status
 H2UnsentRequest::AppendAndDestroySelf(butil::IOBuf* out, Socket* socket) {
 #if defined(BRPC_PROFILE_H2)
@@ -1553,10 +1517,6 @@ H2UnsentRequest::AppendAndDestroySelf(butil::IOBuf* out, Socket* socket) {
             return butil::Status(EINTERNAL, "Fail to init H2Context");
         }
         socket->initialize_parsing_context(&ctx);
-        ctx->possible_goaway_stream_id = GetPossibleStreamId(_cntl, ctx->_stream_mutex);
-        if (_cntl != nullptr) {
-            ctx->raw_socket_id = _cntl->current_call().peer_id;
-        }
         // Append client connection preface
         out->append(H2_CONNECTION_PREFACE_PREFIX,
                     H2_CONNECTION_PREFACE_PREFIX_SIZE);
@@ -1854,7 +1814,6 @@ void PackH2Request(butil::IOBuf*,
 }
 
 static bool IsH2SocketValid(Socket* s, Socket* raw_socket) {
-    //LOG(INFO) << "id" << s->id() << ", last_sent_stream_id=" << s->last_sent_stream_id.load(butil::memory_order_relaxed) << ", raw_id: " << raw_socket->id() << ", possible_h2_max_stream_id=" << raw_socket->possible_h2_max_stream_id;
    return !s->LogOff();
 }
 

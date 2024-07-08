@@ -423,9 +423,7 @@ static const uint64_t AUTH_FLAG = (1ul << 32);
 
 Socket::Socket(Forbidden)
     // must be even because Address() relies on evenness of version
-    : possible_h2_max_stream_id (0x7FFFFFFF)
-    , last_sent_stream_id (1)
-    , _versioned_ref(0)
+    : _versioned_ref(0)
     , _shared_part(NULL)
     , _nevent(0)
     , _keytable_pool(NULL)
@@ -708,8 +706,6 @@ int Socket::Create(const SocketOptions& options, SocketId* id) {
     m->_ssl_state = (options.initial_ssl_ctx == NULL ? SSL_OFF : SSL_UNKNOWN);
     m->_ssl_session = NULL;
     m->_ssl_ctx = options.initial_ssl_ctx;
-    m->last_sent_stream_id = 1;
-    m->possible_h2_max_stream_id = 0x7FFFFFFF;
 #if BRPC_WITH_RDMA
     CHECK(m->_rdma_ep == NULL);
     if (options.use_rdma) {
