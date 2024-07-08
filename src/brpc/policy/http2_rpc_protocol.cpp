@@ -410,7 +410,7 @@ void H2Context::RemoveGoAwayStreams(
              it != _pending_streams.end(); ++it) {
             if (it->first > goaway_stream_id) {
                 //打印socketid, streamid
-                LOG(INFO) << "RemoveGoAwayStreams: " << _socket->id() << " " << it->first;
+                LOG(INFO) << "RemoveGoAwayStreams: " << _socket->id() << " " << it->first << " socket: " << (void*)it->second->socket();
                 out_streams->push_back(it->second);
                 _socket->CancelNotify(bthread_id_t{it->second->correlation_id()});
             }
