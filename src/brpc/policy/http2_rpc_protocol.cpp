@@ -979,10 +979,7 @@ H2ParseResult H2Context::OnGoAway(
     // TODO(zhujiashun): client and server should unify the code.
     // Server Push is not supported so it works fine now.
     if (is_client_side()) {
-        // The socket will not be selected for further requests.
-        LOG(INFO) << "id: " << _socket->id() << " received GOAWAY, last_stream_id: " << last_stream_id;
         _socket->SetLogOff();
-
         std::vector<H2StreamContext*> goaway_streams;
         LOG(INFO) << "GOAWAY received, last_stream_id = " << last_stream_id << ", _last_sent_stream_id: " << _last_sent_stream_id;
         RemoveGoAwayStreams(last_stream_id, &goaway_streams);
@@ -1563,6 +1560,7 @@ H2UnsentRequest::AppendAndDestroySelf(butil::IOBuf* out, Socket* socket) {
     if (rc < 0) {
         return butil::Status(EINTERNAL, "Fail to insert existing stream_id");
     } else if (rc > 0) {
+        socket->CancelNotify(_cntl->call_id());
         return butil::Status(EGOAWAY, "the connection just issued GOAWAY");
     }
     _stream_id = _sctx->stream_id();
