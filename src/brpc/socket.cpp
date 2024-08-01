@@ -1046,7 +1046,7 @@ int Socket::SetFailed(SocketId id) {
 
 void Socket::NotifyOnFailed(bthread_id_t id) {
     pthread_mutex_lock(&_id_wait_list_mutex);
-    if (!Failed()) {
+    if (!Failed() && !LogOff()) {
         const int rc = bthread_id_list_add(&_id_wait_list, id);
         pthread_mutex_unlock(&_id_wait_list_mutex);
         if (rc != 0) {

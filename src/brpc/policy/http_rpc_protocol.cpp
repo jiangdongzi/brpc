@@ -394,6 +394,7 @@ void ProcessHttpResponse(InputMessageBase* msg) {
         // Fail RPC if status code is an error in http sense.
         // ErrorCode of RPC is unified to EHTTP.
         if (sc < 200 || sc >= 300) {
+            LOG(WARNING) << "HTTP response status code: " << sc;
             std::string err = butil::string_printf(
                     "HTTP/%d.%d %d %s",
                     res_header->major_version(),
