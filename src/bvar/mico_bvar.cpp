@@ -42,7 +42,7 @@ public:
 
 static brpc::Channel& GetPrometheusChannel (const std::string& pushgateway_server) {
   static brpc::Channel *channel = new brpc::Channel;
-  // static JoinBvarStat_tid _;
+  static JoinBvarStat_tid _;
   brpc::ChannelOptions options;
   options.protocol = "h2:grpc";
   options.max_retry = 3;
