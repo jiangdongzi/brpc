@@ -30,6 +30,15 @@ option(BUILD_FUZZ_TESTS "Whether to build fuzz tests" OFF)
 option(BUILD_BRPC_TOOLS "Whether to build brpc tools" ON)
 option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires Internet access." ON)
 
+
+# 1. 给外部依赖一个可配置的根目录
+option(MEXTERNAL_ROOT
+  "Root path for external libs/includes (containing include/ and lib/)"
+  "${CMAKE_SOURCE_DIR}/mexternal"
+)
+message(STATUS "External root: ${MEXTERNAL_ROOT}")
+
+
 # Enable MACOSX_RPATH. Run "cmake --help-policy CMP0042" for policy details.
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
@@ -258,16 +267,75 @@ endif()
 
 find_package(OpenSSL)
 
-set(LEVELDB_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
-set(LEVELDB_LIB "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libleveldb.a")
+#set(LEVELDB_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/installed/x64-linux/include")
+#set(LEVELDB_LIB "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libleveldb.a")
+#
+#set(GFLAGS_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/buildtrees/gflags/x64-linux-rel/include")
+#set(GFLAGS_LIBRARY "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libgflags.a")
+#
+#
+#set(PROTOBUF_INCLUDE_DIRS "/home/dev/zhiyuan/new_mico/mico-party-new/mexternal/include")
+#set(PROTOBUF_LIBRARIES "/data/zhiyuan/new_mico/mico-party-new/mexternal/lib/libprotobuf.a")
+#set(OPENSSL_CRYPTO_LIBRARY "/data/zhiyuan/github/vcpkg/packages/openssl-unix_x64-linux/lib/libcrypto.a")
 
-set(GFLAGS_INCLUDE_PATH "/data/zhiyuan/github/vcpkg/buildtrees/gflags/x64-linux-rel/include")
-set(GFLAGS_LIBRARY "/data/zhiyuan/github/vcpkg/installed/x64-linux/lib/libgflags.a")
 
 
-set(PROTOBUF_INCLUDE_DIRS "/home/dev/zhiyuan/new_mico/mico-party-new/mexternal/include")
-set(PROTOBUF_LIBRARIES "/data/zhiyuan/new_mico/mico-party-new/mexternal/lib/libprotobuf.a")
-set(OPENSSL_CRYPTO_LIBRARY "/data/zhiyuan/github/vcpkg/packages/openssl-unix_x64-linux/lib/libcrypto.a")
+# 2. 在该目录下查找头文件和库
+#    LevelDB
+find_path(LEVELDB_INCLUDE_DIR
+  NAMES leveldb/db.h
+  HINTS "${MEXTERNAL_ROOT}/include"
+)
+find_library(LEVELDB_LIB
+  NAMES leveldb libleveldb
+  HINTS "${MEXTERNAL_ROOT}/lib"
+)
+#    gflags
+find_path(GFLAGS_INCLUDE_DIR
+  NAMES gflags/gflags.h
+  HINTS "${MEXTERNAL_ROOT}/include"
+)
+find_library(GFLAGS_LIB
+  NAMES gflags libgflags
+  HINTS "${MEXTERNAL_ROOT}/lib"
+)
+#    protobuf
+find_path(Protobuf_INCLUDE_DIR
+  NAMES google/protobuf/message.h
+  HINTS "${MEXTERNAL_ROOT}/include"
+)
+find_library(Protobuf_LIB
+  NAMES protobuf libprotobuf
+  HINTS "${MEXTERNAL_ROOT}/lib"
+)
+#    openssl crypto
+find_library(OPENSSL_CRYPTO_LIB
+  NAMES crypto libcrypto
+  HINTS "${MEXTERNAL_ROOT}/lib"
+)
+
+# 3. 检查必需的依赖是否都找到了
+foreach(var IN ITEMS
+    LEVELDB_INCLUDE_DIR LEVELDB_LIB
+    GFLAGS_INCLUDE_DIR  GFLAGS_LIB
+    Protobuf_INCLUDE_DIR Protobuf_LIB
+    OPENSSL_CRYPTO_LIB
+  )
+  if(NOT ${var})
+    message(FATAL_ERROR "Could not find ${var}, please check MEXTERNAL_ROOT")
+  endif()
+endforeach()
+
+
+# （可选）打印最终链接信息
+message(STATUS "LEVELDB include: ${LEVELDB_INCLUDE_DIR}")
+message(STATUS "LEVELDB lib:     ${LEVELDB_LIB}")
+message(STATUS "gflags include:  ${GFLAGS_INCLUDE_DIR}")
+message(STATUS "gflags lib:      ${GFLAGS_LIB}")
+message(STATUS "protobuf include:${Protobuf_INCLUDE_DIR}")
+message(STATUS "protobuf lib:    ${Protobuf_LIB}")
+message(STATUS "openssl crypto:  ${OPENSSL_CRYPTO_LIB}")
+
 
 
 include_directories(
