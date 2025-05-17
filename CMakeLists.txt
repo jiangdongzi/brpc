@@ -107,8 +107,8 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
 )
-include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/install/include/bsoncxx/v_noabi")
-include_directories("/home/jdz201503_wsl/github/mongo-cxx-driver/build/src/bsoncxx/third_party/_deps/core-install/include")
+
+include_directories(${MEXTERNAL_ROOT}/include)
 
 execute_process(
     COMMAND bash -c "${PROJECT_SOURCE_DIR}/tools/get_brpc_revision.sh ${PROJECT_SOURCE_DIR} | tr -d '\n'"

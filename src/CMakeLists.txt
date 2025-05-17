@@ -27,6 +27,22 @@ add_library(BUTIL_LIB OBJECT ${BUTIL_SOURCES})
 add_library(SOURCES_LIB OBJECT ${SOURCES})
 add_dependencies(SOURCES_LIB PROTO_LIB)
 
+
+target_include_directories(BUTIL_LIB
+  PRIVATE
+    ${MEXTERNAL_ROOT}/include
+)
+# 如果你还要链接 mongo C++ driver 的库（建议也加上去）
+
+set(BSONCXX_LIB  "${MEXTERNAL_ROOT}/lib/libbsoncxx-static.a")
+set(BSON_LIB     "${MEXTERNAL_ROOT}/lib/libbson-static-1.0.a")
+
+target_link_libraries(BUTIL_LIB
+  PRIVATE
+    ${BSONCXX_LIB}
+    ${BSON_LIB}
+)
+
 # shared library needs POSITION_INDEPENDENT_CODE
 set_property(TARGET ${SOURCES_LIB} PROPERTY POSITION_INDEPENDENT_CODE 1)
 set_property(TARGET ${BUTIL_LIB} PROPERTY POSITION_INDEPENDENT_CODE 1)
