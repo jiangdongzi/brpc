@@ -207,11 +207,11 @@ else()
 endif()
 find_package(Threads REQUIRED)
 
-find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
-find_library(LEVELDB_LIB NAMES leveldb)
-if ((NOT LEVELDB_INCLUDE_PATH) OR (NOT LEVELDB_LIB))
-    message(FATAL_ERROR "Fail to find leveldb")
-endif()
+# find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
+# find_library(LEVELDB_LIB NAMES leveldb)
+# if ((NOT LEVELDB_INCLUDE_PATH) OR (NOT LEVELDB_LIB))
+#     message(FATAL_ERROR "Fail to find leveldb")
+# endif()
 
 if(WITH_SNAPPY)
     find_path(SNAPPY_INCLUDE_PATH NAMES snappy.h)
@@ -341,7 +341,7 @@ message(STATUS "openssl crypto:  ${OPENSSL_CRYPTO_LIB}")
 include_directories(
         ${GFLAGS_INCLUDE_PATH}
         ${PROTOBUF_INCLUDE_DIRS}
-        ${LEVELDB_INCLUDE_PATH}
+        # ${LEVELDB_INCLUDE_PATH}
         ${OPENSSL_INCLUDE_DIR}
         )
 
