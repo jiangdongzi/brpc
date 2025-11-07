@@ -28,14 +28,13 @@ add_library(SOURCES_LIB OBJECT ${SOURCES})
 add_dependencies(SOURCES_LIB PROTO_LIB)
 
 
-target_include_directories(BUTIL_LIB
-  PRIVATE
-    ${MEXTERNAL_ROOT}/include
-)
-# 如果你还要链接 mongo C++ driver 的库（建议也加上去）
-
-set(BSONCXX_LIB  "${MEXTERNAL_ROOT}/lib/libbsoncxx-static.a")
-set(BSON_LIB     "${MEXTERNAL_ROOT}/lib/libbson-static-1.0.a")
+if(BSONCXX_INCLUDE_DIR)
+    target_include_directories(BUTIL_LIB
+      PRIVATE
+        ${BSONCXX_INCLUDE_DIR}
+        ${BSONCXX_THIRD_PARTY_INCLUDE_DIR}
+    )
+endif()
 
 target_link_libraries(BUTIL_LIB
   PRIVATE

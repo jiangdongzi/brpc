@@ -106,6 +106,30 @@ endif()
 find_package(OpenSSL)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+# bson and bsoncxx are needed because libbrpc.a references them
+find_path(BSONCXX_INCLUDE_DIR
+  NAMES bsoncxx/json.hpp
+  PATHS /usr/local/include /usr/include
+  PATH_SUFFIXES bsoncxx/v_noabi
+)
+find_library(BSONCXX_LIB
+  NAMES bsoncxx libbsoncxx
+  PATHS /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib/x86_64-linux-gnu
+)
+find_library(BSON_LIB
+  NAMES bson-1.0 libbson-1.0
+  PATHS /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib/x86_64-linux-gnu
+)
+if((NOT BSONCXX_INCLUDE_DIR) OR (NOT BSONCXX_LIB) OR (NOT BSON_LIB))
+    message(FATAL_ERROR "Fail to find bson/bsoncxx")
+endif()
+set(BSONCXX_THIRD_PARTY_INCLUDE_DIR "${BSONCXX_INCLUDE_DIR}/bsoncxx/third_party/mnmlstc")
+if(NOT EXISTS "${BSONCXX_THIRD_PARTY_INCLUDE_DIR}/core/optional.hpp")
+    message(FATAL_ERROR "Fail to find bsoncxx third_party headers")
+endif()
+include_directories(${BSONCXX_INCLUDE_DIR})
+include_directories(${BSONCXX_THIRD_PARTY_INCLUDE_DIR})
+
 set(DYNAMIC_LIB
     ${CMAKE_THREAD_LIBS_INIT}
     ${GFLAGS_LIBRARY}
@@ -115,6 +139,8 @@ set(DYNAMIC_LIB
     ${OPENSSL_SSL_LIBRARY}
     ${THRIFT_LIB}
     dl
+    ${BSONCXX_LIB}
+    ${BSON_LIB}
     )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")

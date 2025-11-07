@@ -32,11 +32,20 @@ option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires I
 
 
 # 1. 给外部依赖一个可配置的根目录
-option(MEXTERNAL_ROOT
-  "Root path for external libs/includes (containing include/ and lib/)"
-  "${CMAKE_SOURCE_DIR}/mexternal"
-)
-message(STATUS "External root: ${MEXTERNAL_ROOT}")
+set(_BRPC_DEFAULT_MEXTERNAL "")
+if(EXISTS "${CMAKE_SOURCE_DIR}/mexternal")
+    set(_BRPC_DEFAULT_MEXTERNAL "${CMAKE_SOURCE_DIR}/mexternal")
+endif()
+if(DEFINED MEXTERNAL_ROOT AND (MEXTERNAL_ROOT STREQUAL "ON" OR MEXTERNAL_ROOT STREQUAL "OFF"))
+    unset(MEXTERNAL_ROOT CACHE)
+endif()
+set(MEXTERNAL_ROOT "${_BRPC_DEFAULT_MEXTERNAL}" CACHE PATH
+    "Root path for external libs/includes (containing include/ and lib/)")
+if(MEXTERNAL_ROOT)
+    message(STATUS "External root: ${MEXTERNAL_ROOT}")
+else()
+    message(STATUS "External root not set; using system libraries")
+endif()
 
 
 # Enable MACOSX_RPATH. Run "cmake --help-policy CMP0042" for policy details.
@@ -108,7 +117,16 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-include_directories(${MEXTERNAL_ROOT}/include)
+if(MEXTERNAL_ROOT)
+    include_directories(${MEXTERNAL_ROOT}/include)
+endif()
+
+set(_BRPC_INCLUDE_HINTS)
+set(_BRPC_LIBRARY_HINTS)
+if(MEXTERNAL_ROOT)
+    list(APPEND _BRPC_INCLUDE_HINTS "${MEXTERNAL_ROOT}/include")
+    list(APPEND _BRPC_LIBRARY_HINTS "${MEXTERNAL_ROOT}/lib")
+endif()
 
 execute_process(
     COMMAND bash -c "${PROJECT_SOURCE_DIR}/tools/get_brpc_revision.sh ${PROJECT_SOURCE_DIR} | tr -d '\n'"
@@ -281,34 +299,48 @@ find_package(OpenSSL)
 #    LevelDB
 find_path(LEVELDB_INCLUDE_DIR
   NAMES leveldb/db.h
-  HINTS "${MEXTERNAL_ROOT}/include"
+  HINTS ${_BRPC_INCLUDE_HINTS}
 )
 find_library(LEVELDB_LIB
   NAMES leveldb libleveldb
-  HINTS "${MEXTERNAL_ROOT}/lib"
+  HINTS ${_BRPC_LIBRARY_HINTS} /usr/lib /usr/lib/x86_64-linux-gnu
 )
 #    gflags
 find_path(GFLAGS_INCLUDE_DIR
   NAMES gflags/gflags.h
-  HINTS "${MEXTERNAL_ROOT}/include"
+  HINTS ${_BRPC_INCLUDE_HINTS}
 )
 find_library(GFLAGS_LIB
   NAMES gflags libgflags
-  HINTS "${MEXTERNAL_ROOT}/lib"
+  HINTS ${_BRPC_LIBRARY_HINTS} /usr/lib /usr/lib/x86_64-linux-gnu
 )
 #    protobuf
 find_path(Protobuf_INCLUDE_DIR
   NAMES google/protobuf/message.h
-  HINTS "${MEXTERNAL_ROOT}/include"
+  HINTS ${_BRPC_INCLUDE_HINTS}
 )
 find_library(Protobuf_LIB
   NAMES protobuf libprotobuf
-  HINTS "${MEXTERNAL_ROOT}/lib"
+  HINTS ${_BRPC_LIBRARY_HINTS} /usr/lib /usr/lib/x86_64-linux-gnu
 )
 #    openssl crypto
 find_library(OPENSSL_CRYPTO_LIB
   NAMES crypto libcrypto
-  HINTS "${MEXTERNAL_ROOT}/lib"
+  HINTS ${_BRPC_LIBRARY_HINTS} /usr/lib /usr/lib/x86_64-linux-gnu
+)
+#    bson / bsoncxx
+find_path(BSONCXX_INCLUDE_DIR
+  NAMES bsoncxx/json.hpp
+  HINTS ${_BRPC_INCLUDE_HINTS} /usr/local/include /usr/include
+  PATH_SUFFIXES bsoncxx/v_noabi
+)
+find_library(BSONCXX_LIB
+  NAMES bsoncxx libbsoncxx
+  HINTS ${_BRPC_LIBRARY_HINTS} /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib/x86_64-linux-gnu
+)
+find_library(BSON_LIB
+  NAMES bson-1.0 libbson-1.0
+  HINTS ${_BRPC_LIBRARY_HINTS} /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib/x86_64-linux-gnu
 )
 
 # 3. 检查必需的依赖是否都找到了
@@ -317,11 +349,18 @@ foreach(var IN ITEMS
     GFLAGS_INCLUDE_DIR  GFLAGS_LIB
     Protobuf_INCLUDE_DIR Protobuf_LIB
     OPENSSL_CRYPTO_LIB
+    BSONCXX_INCLUDE_DIR BSONCXX_LIB
+    BSON_LIB
   )
   if(NOT ${var})
     message(FATAL_ERROR "Could not find ${var}, please check MEXTERNAL_ROOT")
   endif()
 endforeach()
+
+set(BSONCXX_THIRD_PARTY_INCLUDE_DIR "${BSONCXX_INCLUDE_DIR}/bsoncxx/third_party/mnmlstc")
+if(NOT EXISTS "${BSONCXX_THIRD_PARTY_INCLUDE_DIR}/core/optional.hpp")
+    message(FATAL_ERROR "Could not find bsoncxx third_party headers (expected ${BSONCXX_INCLUDE_DIR}/bsoncxx/third_party/mnmlstc)")
+endif()
 
 
 # （可选）打印最终链接信息
@@ -332,20 +371,27 @@ message(STATUS "gflags lib:      ${GFLAGS_LIB}")
 message(STATUS "protobuf include:${Protobuf_INCLUDE_DIR}")
 message(STATUS "protobuf lib:    ${Protobuf_LIB}")
 message(STATUS "openssl crypto:  ${OPENSSL_CRYPTO_LIB}")
+message(STATUS "bsoncxx include: ${BSONCXX_INCLUDE_DIR}")
+message(STATUS "bsoncxx third_party: ${BSONCXX_THIRD_PARTY_INCLUDE_DIR}")
+message(STATUS "bsoncxx lib:     ${BSONCXX_LIB}")
+message(STATUS "bson lib:        ${BSON_LIB}")
 
 
 
 include_directories(
         ${GFLAGS_INCLUDE_PATH}
         ${PROTOBUF_INCLUDE_DIRS}
-        # ${LEVELDB_INCLUDE_PATH}
         ${OPENSSL_INCLUDE_DIR}
+        ${BSONCXX_INCLUDE_DIR}
+        ${BSONCXX_THIRD_PARTY_INCLUDE_DIR}
         )
 
 set(DYNAMIC_LIB
     ${GFLAGS_LIBRARY}
     ${PROTOBUF_LIBRARIES} ${protobuf_ABSL_USED_TARGETS}
     ${LEVELDB_LIB}
+    ${BSONCXX_LIB}
+    ${BSON_LIB}
     ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${THRIFT_LIB}
@@ -366,7 +412,7 @@ if(WITH_RDMA)
     list(APPEND DYNAMIC_LIB ${RDMA_LIB})
 endif()
 
-set(BRPC_PRIVATE_LIBS "-lgflags -lprotobuf -lleveldb -lprotoc -lssl -lcrypto -ldl -lz")
+set(BRPC_PRIVATE_LIBS "-lgflags -lprotobuf -lleveldb -lbsoncxx -lbson-1.0 -lprotoc -lssl -lcrypto -ldl -lz")
 
 if(WITH_GLOG)
     set(DYNAMIC_LIB ${DYNAMIC_LIB} ${GLOG_LIB})

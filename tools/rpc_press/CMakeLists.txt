@@ -18,10 +18,4 @@
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/tools/rpc_press/*.cpp")
 add_executable(rpc_press ${SOURCES})
 target_link_libraries(rpc_press brpc-static ${DYNAMIC_LIB})
-target_link_directories(rpc_press
-    PUBLIC
-    ${MEXTERNAL_ROOT}/lib
-)
-target_link_libraries(rpc_press bsoncxx-static)
-target_link_libraries(rpc_press bson-static-1.0)
 install(TARGETS rpc_press RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

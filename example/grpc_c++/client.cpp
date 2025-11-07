@@ -20,6 +20,7 @@
 #include <gflags/gflags.h>
 #include <butil/logging.h>
 #include <butil/time.h>
+#include <string>
 #include <brpc/channel.h>
 #include "helloworld.pb.h"
 
@@ -30,6 +31,8 @@ DEFINE_int32(timeout_ms, 100, "RPC timeout in milliseconds");
 DEFINE_int32(max_retry, 3, "Max retries(not including the first RPC)"); 
 DEFINE_int32(interval_ms, 1000, "Milliseconds between consecutive requests");
 DEFINE_bool(gzip, false, "compress body using gzip");
+DEFINE_int32(payload_size, 0, "Size of the HelloRequest.name payload (bytes). 0 keeps default message");
+DEFINE_bool(run_once, false, "Send only one request and exit");
 
 int main(int argc, char* argv[]) {
     // Parse gflags. We recommend you to use gflags as well.
@@ -57,14 +60,20 @@ int main(int argc, char* argv[]) {
     helloworld::Greeter_Stub stub(&channel);
 
     // Send a request and wait for the response every 1 second.
-    while (!brpc::IsAskedToQuit()) {
+    std::string payload = "grpc_req_from_brpc";
+    if (FLAGS_payload_size > 0) {
+        payload.assign(FLAGS_payload_size, 'x');
+    }
+
+    bool stop = false;
+    while (!brpc::IsAskedToQuit() && !stop) {
         // We will receive response synchronously, safe to put variables
         // on stack.
         helloworld::HelloRequest request;
         helloworld::HelloReply response;
         brpc::Controller cntl;
 
-        request.set_name("grpc_req_from_brpc");
+        request.set_name(payload);
         if (FLAGS_gzip) {
             cntl.set_request_compress_type(brpc::COMPRESS_TYPE_GZIP);
         }
@@ -79,7 +88,11 @@ int main(int argc, char* argv[]) {
         } else {
             LOG(WARNING) << cntl.ErrorText();
         }
-        usleep(FLAGS_interval_ms * 1000L);
+        if (FLAGS_run_once) {
+            stop = true;
+            break;
+        }
+        usleep(FLAGS_interval_ms * 1L);
     }
 
     return 0;
