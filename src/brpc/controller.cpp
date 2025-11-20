@@ -608,6 +608,7 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
 
     if ((_error_code == EGOAWAY || saved_error == EMOVED) && _current_call.fake_error_try++ < 3) {
         _current_call.OnComplete(this, _error_code, info.responded, false);
+        ++_current_call.nretry;
         return IssueRPC(butil::gettimeofday_us());
     }
 
