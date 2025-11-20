@@ -32,10 +32,8 @@ option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires I
 
 
 # 1. 给外部依赖一个可配置的根目录
-option(MEXTERNAL_ROOT
-  "Root path for external libs/includes (containing include/ and lib/)"
-  "${CMAKE_SOURCE_DIR}/mexternal"
-)
+set(MEXTERNAL_ROOT "${CMAKE_SOURCE_DIR}/mexternal" CACHE PATH
+  "Root path for external libs/includes (containing include/ and lib/)")
 message(STATUS "External root: ${MEXTERNAL_ROOT}")
 
 

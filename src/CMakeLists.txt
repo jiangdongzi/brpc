@@ -27,6 +27,10 @@ add_library(BUTIL_LIB OBJECT ${BUTIL_SOURCES})
 add_library(SOURCES_LIB OBJECT ${SOURCES})
 add_dependencies(SOURCES_LIB PROTO_LIB)
 
+target_include_directories(SOURCES_LIB
+  PRIVATE
+    ${MEXTERNAL_ROOT}/include
+)
 
 target_include_directories(BUTIL_LIB
   PRIVATE
