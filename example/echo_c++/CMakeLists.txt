@@ -107,6 +107,15 @@ endif()
 find_package(OpenSSL)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+find_library(MONGOCXX_LIB NAMES mongocxx libmongocxx)
+find_library(MONGOC_LIB  NAMES mongoc-1.0 libmongoc-1.0)
+find_library(BSONCXX_LIB NAMES bsoncxx libbsoncxx)
+find_library(BSON_LIB    NAMES bson-1.0 libbson-1.0)
+
+if((NOT MONGOCXX_LIB) OR (NOT MONGOC_LIB) OR (NOT BSONCXX_LIB) OR (NOT BSON_LIB))
+    message(FATAL_ERROR "Fail to find MongoDB C/C++ driver libraries (mongocxx/mongoc-1.0/bsoncxx/bson-1.0)")
+endif()
+
 set(DYNAMIC_LIB
     ${CMAKE_THREAD_LIBS_INIT}
     ${GFLAGS_LIBRARY}
@@ -117,6 +126,13 @@ set(DYNAMIC_LIB
     ${THRIFT_LIB}
     dl
     )
+
+list(APPEND DYNAMIC_LIB
+    ${MONGOCXX_LIB}
+    ${MONGOC_LIB}
+    ${BSONCXX_LIB}
+    ${BSON_LIB}
+)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(DYNAMIC_LIB ${DYNAMIC_LIB}
