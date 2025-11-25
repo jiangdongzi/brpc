@@ -23,6 +23,7 @@
 #include <brpc/channel.h>
 #include <brpc/redis.h>
 #include "butil/strings/string_split.h"
+#include <memory>
 #include <netdb.h>  // gethostbyname_r
 #include <stdlib.h> // strtol
 #include <string>   // std::string
@@ -51,9 +52,10 @@ int RedisClusterNamingService::GetServers(const char *service_name_and_token, st
     brpc::ChannelOptions options;
     options.protocol = brpc::PROTOCOL_REDIS;
     options.timeout_ms = 1000;
+    brpc::policy::RedisAuthenticator* auth = new brpc::policy::RedisAuthenticator(token);
+    std::unique_ptr<brpc::policy::RedisAuthenticator> _guard(auth);
     options.max_retry = 3;
     if (!token.empty()) {
-        brpc::policy::RedisAuthenticator* auth = new brpc::policy::RedisAuthenticator(token);
         options.auth = auth;
     }
     if (channel.Init(service_name.c_str(), &options) != 0) {

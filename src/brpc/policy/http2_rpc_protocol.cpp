@@ -1526,8 +1526,12 @@ H2UnsentRequest::AppendAndDestroySelf(butil::IOBuf* out, Socket* socket) {
         out->append(settingsbuf, nb);
     }
 
+    const size_t pending_streams_count = ctx->VolatilePendingStreamSize();
+    if (pending_streams_count > 100) {
+        LOG(WARNING) << "High pending streams count=" << pending_streams_count;
+    }
     // TODO(zhujiashun): also check this in server push
-    if (ctx->VolatilePendingStreamSize() > ctx->remote_settings().max_concurrent_streams) {
+    if (pending_streams_count > ctx->remote_settings().max_concurrent_streams) {
         return butil::Status(ELIMIT, "Pending Stream count exceeds max concurrent stream");
     }
 
