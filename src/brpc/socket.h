@@ -255,6 +255,7 @@ public:
     Socket(Forbidden);
     ~Socket();
 
+    std::atomic<bool> marked_go_away;
     // Write `msg' into this Socket and clear it. The `msg' should be an
     // intact request or response. To prevent messages from interleaving
     // with other messages, the internal file descriptor is written by one

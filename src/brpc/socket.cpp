@@ -18,6 +18,7 @@
 
 #include "butil/compat.h"                        // OS_MACOSX
 #include "butil/ssl_compat.h"                    // BIO_fd_non_fatal_error
+#include <execinfo.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #ifdef USE_MESALINK
@@ -695,6 +696,7 @@ int Socket::Create(const SocketOptions& options, SocketId* id) {
     m->_hc_started.store(false, butil::memory_order_relaxed);
     m->_ninprocess.store(1, butil::memory_order_relaxed);
     m->_auth_flag_error.store(0, butil::memory_order_relaxed);
+    m->marked_go_away.store(false, butil::memory_order_relaxed);
     const int rc2 = bthread_id_create(&m->_auth_id, NULL, NULL);
     if (rc2) {
         LOG(ERROR) << "Fail to create auth_id: " << berror(rc2);

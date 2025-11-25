@@ -24,7 +24,7 @@
 #include "bthread/types.h"
 #include "butil/base64.h"
 #include "brpc/log.h"
-
+#include <execinfo.h>
 namespace brpc {
 
 DECLARE_bool(http_verbose);
@@ -980,6 +980,7 @@ H2ParseResult H2Context::OnGoAway(
     // Server Push is not supported so it works fine now.
     if (is_client_side()) {
         _socket->SetLogOff();
+        _socket->marked_go_away.store(true, butil::memory_order_relaxed);
         std::vector<H2StreamContext*> goaway_streams;
         LOG(INFO) << "GOAWAY received, last_stream_id = " << last_stream_id << ", _last_sent_stream_id: " << _last_sent_stream_id;
         RemoveGoAwayStreams(last_stream_id, &goaway_streams);

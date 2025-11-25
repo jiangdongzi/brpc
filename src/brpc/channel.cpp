@@ -444,7 +444,7 @@ void Channel::CallMethod(const google::protobuf::MethodDescriptor* method,
     }
     const CallId correlation_id = cntl->call_id();
     const int rc = bthread_id_lock_and_reset_range(
-                    correlation_id, NULL, 2 + cntl->max_retry());
+                    correlation_id, NULL, 5 + cntl->max_retry());
     if (rc != 0) {
         CHECK_EQ(EINVAL, rc);
         if (!cntl->FailedInline()) {

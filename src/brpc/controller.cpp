@@ -16,6 +16,8 @@
 // under the License.
 
 
+#include <cstddef>
+#include <execinfo.h>
 #include <signal.h>
 #include <openssl/md5.h>
 #include <google/protobuf/descriptor.h>
@@ -603,10 +605,16 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
     }
 
     if (_error_code != 0) {
-        LOG(ERROR) << "RPC failed: " << _error_text << " code: " << _error_code;
+        LOG(ERROR) << "RPC failed: " << _error_text << " code: " << _error_code << " fake_error_try=" << _current_call.fake_error_try;
     }
 
-    if ((_error_code == EGOAWAY || saved_error == EMOVED || _error_code == EFAILEDSOCKET || _error_code == EEOF) && _current_call.fake_error_try++ < 3) {
+    if (_current_call.sending_sock != nullptr && _current_call.sending_sock->marked_go_away.load(butil::memory_order_relaxed) && (_error_code == EEOF || _error_code == EFAILEDSOCKET)) {
+        LOG(ERROR) << "Socket marked go away and error code is " << _error_code << ", try to unlock and return.";
+        CHECK_EQ(0, bthread_id_unlock(info.id));
+        return;
+    }
+
+    if ((_error_code == EGOAWAY || saved_error == EMOVED ) && _current_call.fake_error_try++ < 3) {
         _current_call.OnComplete(this, _error_code, info.responded, false);
         ++_current_call.nretry;
         return IssueRPC(butil::gettimeofday_us());
